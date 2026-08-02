@@ -606,7 +606,8 @@ h1 {
 }
 
 .holder-aggregate-grid,
-.holder-fund-grid {
+.holder-fund-grid,
+.holder-standalone-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 28px;
@@ -696,6 +697,70 @@ h1 {
 
 .holder-fund-chart {
   min-height: 310px;
+}
+
+.holder-standalone {
+  position: relative;
+  overflow: hidden;
+  margin-top: 78px;
+  padding: clamp(24px, 3.5vw, 46px);
+  border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--line));
+  border-radius: calc(var(--radius) + 4px);
+  background:
+    radial-gradient(circle at 100% 0, var(--accent-soft), transparent 34rem),
+    color-mix(in srgb, var(--surface-raised) 82%, transparent);
+}
+
+.holder-standalone::before {
+  content: "159915";
+  position: absolute;
+  top: -0.2em;
+  right: 0.03em;
+  color: color-mix(in srgb, var(--accent) 8%, transparent);
+  font: 600 clamp(72px, 10vw, 150px)/1 "IBM Plex Mono", monospace;
+  letter-spacing: -0.08em;
+  pointer-events: none;
+}
+
+.holder-standalone-heading {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.55fr);
+  align-items: end;
+  gap: 28px;
+}
+
+.holder-standalone-heading h3 {
+  margin: 0;
+  font-size: clamp(30px, 4vw, 52px);
+  font-weight: 610;
+  letter-spacing: -0.05em;
+}
+
+.holder-standalone-heading h3 span {
+  margin-left: 10px;
+  color: var(--accent-strong);
+  font: 600 0.42em/1 "IBM Plex Mono", monospace;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
+}
+
+.holder-standalone-heading > p {
+  margin: 0 0 4px;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.75;
+}
+
+.holder-standalone-grid {
+  position: relative;
+  z-index: 1;
+  margin-top: 30px;
+}
+
+.holder-standalone-panel {
+  background: color-mix(in srgb, var(--surface) 97%, transparent);
 }
 
 .holder-notes {
@@ -1097,7 +1162,12 @@ footer p {
   }
 
   .holder-aggregate-grid,
-  .holder-fund-grid {
+  .holder-fund-grid,
+  .holder-standalone-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .holder-standalone-heading {
     grid-template-columns: 1fr;
   }
 }
@@ -1216,6 +1286,20 @@ footer p {
   .holder-fund-heading {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .holder-standalone {
+    margin-top: 64px;
+    padding: 20px;
+  }
+
+  .holder-standalone-heading {
+    gap: 16px;
+  }
+
+  .holder-standalone-heading h3 span {
+    display: block;
+    margin: 10px 0 0;
   }
 
   .holder-notes {

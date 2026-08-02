@@ -27,6 +27,8 @@ test("the page exposes all required static data views", async () => {
   assert.match(html, /id="about"/);
   assert.match(html, /id="holder-aggregate-shares-chart"/);
   assert.match(html, /id="holder-aggregate-ratio-chart"/);
+  assert.match(html, /id="holder-chinext-shares-chart"/);
+  assert.match(html, /id="holder-chinext-ratio-chart"/);
   assert.match(html, /id="holder-category-filter"/);
   assert.match(html, /id="fund-grid"/);
   assert.match(html, /href="\/data\/etf-shares\.csv"/);
@@ -34,6 +36,7 @@ test("the page exposes all required static data views", async () => {
   assert.match(script, /data\.funds\.map\(fundCard\)/);
   assert.match(script, /renderAggregate\(data\)/);
   assert.match(script, /renderHolderAggregate/);
+  assert.match(script, /renderHolderStandalone/);
   assert.match(script, /data-chart-action/);
   assert.match(script, /bindPressCursor/);
   assert.match(script, /chart-press-readout/);
@@ -52,4 +55,6 @@ test("holder controls expose all requested categories and metrics", async () => 
   assert.match(html, /data-holder-metric="shares_100m"/);
   assert.match(html, /data-holder-metric="ratio_pct"/);
   assert.match(script, /selectedHolderCategories/);
+  assert.match(script, /metadata\.aggregate_fund_codes/);
+  assert.match(script, /metadata\.standalone_fund_codes/);
 });

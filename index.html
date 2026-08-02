@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="一个可核验的沪深300ETF公开数据观察站，展示四只主流产品最近十年的官方日终份额，以及国家队、其他机构和个人的半年度持有趋势。"
+      content="一个可核验的ETF公开数据观察站，展示四只主流沪深300ETF最近十年的官方日终份额，并单独观察易方达创业板ETF的半年度持有人趋势。"
     />
     <meta name="theme-color" content="#eef1f2" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#10171c" media="(prefers-color-scheme: dark)" />
     <meta property="og:title" content="沪深300ETF十年份额观察" />
     <meta
       property="og:description"
-      content="把510300、510310、510330、159919的官方日终份额与持有人结构放在同一页观察。"
+      content="把四只主流沪深300ETF的官方日终份额与持有人结构放在同一页，并单独展示159915持有人趋势。"
     />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://etf.zluna.ai/" />
@@ -24,7 +24,7 @@
         "@context": "https://schema.org",
         "@type": "Dataset",
         "name": "A股主流沪深300ETF日终份额",
-        "description": "四只主流沪深300ETF最近十年的交易所官方日终份额，以及中报和年报披露的持有人结构数据。",
+        "description": "四只主流沪深300ETF最近十年的交易所官方日终份额，以及包含易方达创业板ETF独立观察的中报和年报持有人结构数据。",
         "url": "https://etf.zluna.ai/",
         "license": "https://github.com/beimingmaster/csi300-etf-shares/blob/main/LICENSE",
         "creator": {
@@ -103,7 +103,7 @@
 
         <div class="about-content">
           <p class="about-lead">
-            这是一个面向投资者与研究者的公开数据观察站，持续追踪510300、510310、510330和159919四只主流沪深300ETF。网站把交易所日终总份额与基金年报、中报披露的持有人结构放在同一页，帮助区分市场申赎变化与“谁在持有”。
+            这是一个面向投资者与研究者的公开数据观察站，持续追踪510300、510310、510330和159919四只主流沪深300ETF，并单独观察159915易方达创业板ETF。网站把交易所日终总份额与基金年报、中报披露的持有人结构放在同一页，帮助区分市场申赎变化与“谁在持有”。
           </p>
           <div class="about-facts" aria-label="网站数据特点">
             <article>
@@ -160,7 +160,7 @@
       <section class="holders-section" id="holders" aria-labelledby="holders-title">
         <div class="section-heading holders-heading">
           <p class="section-kicker">中报与年报 / 半年度快照</p>
-          <h2 id="holders-title">谁在持有这四只ETF</h2>
+          <h2 id="holders-title">谁在持有这些ETF</h2>
           <p>
             从基金定期报告原表还原国家队、其他机构和个人持有份额。点位是报告期末快照，连接线仅用于观察披露次序。
           </p>
@@ -277,6 +277,66 @@
         </div>
         <div class="holder-fund-grid" id="holder-fund-grid" aria-live="polite"></div>
 
+        <section class="holder-standalone" aria-labelledby="chinext-holder-title">
+          <div class="holder-standalone-heading">
+            <div>
+              <p class="panel-index">04 / 创业板单独观察</p>
+              <h3 id="chinext-holder-title">易方达创业板ETF <span>159915</span></h3>
+            </div>
+            <p>两张图共用上方持有人类别选择；本基金不计入四只沪深300ETF汇总。</p>
+          </div>
+
+          <div class="holder-standalone-grid">
+            <article class="holder-chart-panel holder-standalone-panel">
+              <header>
+                <div>
+                  <p class="panel-index">159915 / 份额</p>
+                  <h3>持有份额趋势</h3>
+                </div>
+                <span>亿份</span>
+              </header>
+              <div class="chart-shell">
+                <div class="chart-loading" aria-hidden="true"></div>
+                <div class="chart-tools" role="group" aria-label="易方达创业板ETF持有人份额图缩放控制">
+                  <button type="button" data-chart-action="zoom-in" data-chart-id="holder-chinext-shares-chart" aria-label="放大易方达创业板ETF持有人份额图">+</button>
+                  <button type="button" data-chart-action="zoom-out" data-chart-id="holder-chinext-shares-chart" aria-label="缩小易方达创业板ETF持有人份额图">−</button>
+                  <button type="button" data-chart-action="reset" data-chart-id="holder-chinext-shares-chart">重置</button>
+                </div>
+                <div
+                  class="chart holder-aggregate-chart"
+                  id="holder-chinext-shares-chart"
+                  role="img"
+                  aria-label="易方达创业板ETF按持有人类别的份额趋势图"
+                ></div>
+              </div>
+            </article>
+
+            <article class="holder-chart-panel holder-standalone-panel">
+              <header>
+                <div>
+                  <p class="panel-index">159915 / 占比</p>
+                  <h3>持有占比趋势</h3>
+                </div>
+                <span>占总份额</span>
+              </header>
+              <div class="chart-shell">
+                <div class="chart-loading" aria-hidden="true"></div>
+                <div class="chart-tools" role="group" aria-label="易方达创业板ETF持有人占比图缩放控制">
+                  <button type="button" data-chart-action="zoom-in" data-chart-id="holder-chinext-ratio-chart" aria-label="放大易方达创业板ETF持有人占比图">+</button>
+                  <button type="button" data-chart-action="zoom-out" data-chart-id="holder-chinext-ratio-chart" aria-label="缩小易方达创业板ETF持有人占比图">−</button>
+                  <button type="button" data-chart-action="reset" data-chart-id="holder-chinext-ratio-chart">重置</button>
+                </div>
+                <div
+                  class="chart holder-aggregate-chart"
+                  id="holder-chinext-ratio-chart"
+                  role="img"
+                  aria-label="易方达创业板ETF按持有人类别的占比趋势图"
+                ></div>
+              </div>
+            </article>
+          </div>
+        </section>
+
         <div class="holder-notes">
           <p>
             “国家队”在此指前十名持有人中明确命名的中央汇金和中国证券金融账户。未进入前十不等于持仓为零，因此国家队曲线是已识别下限。
@@ -325,7 +385,7 @@
           <article>
             <h3>原始来源</h3>
             <p>
-              日份额来自上交所与深交所，交易日历来自中证指数；持有人数据来自证监会统一披露平台原始中报和年报。
+              日份额来自上交所与深交所，交易日历来自中证指数；持有人数据来自证监会统一披露平台或基金管理人官网原始中报和年报。
             </p>
           </article>
           <article>

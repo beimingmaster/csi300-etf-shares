@@ -1,18 +1,27 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "metadata": {
     "start_period": "2021-12-31",
     "latest_period": "2025-12-31",
     "latest_disclosure_date": "2026-03-31",
     "period_count": 9,
-    "report_count": 36,
+    "report_count": 45,
     "disclosure_frequency": "semiannual",
-    "source_name": "中国证监会资本市场统一信息披露平台",
+    "source_name": "中国证监会资本市场统一信息披露平台及基金管理人官网",
     "source_url": "http://eid.csrc.gov.cn/fund/",
+    "aggregate_fund_codes": [
+      "510300",
+      "510310",
+      "510330",
+      "159919"
+    ],
+    "standalone_fund_codes": [
+      "159915"
+    ],
     "q1_2026_holder_data_available": false,
     "national_team_definition": "定期报告前十名持有人中明确命名的中央汇金和中国证券金融账户合计",
     "other_institution_definition": "可比机构份额扣除已识别国家队份额，包含保险、券商、银行、资管等，不含ETF联接基金",
-    "aggregate_definition": "四只基金报告原始份额直接相加，占比为合计分类份额除以合计总份额，不代表资产金额",
+    "aggregate_definition": "四只沪深300ETF报告原始份额直接相加，占比为合计分类份额除以合计总份额；159915仅单独展示，不进入汇总",
     "connection_line_note": "连接线仅辅助观察中报和年报披露点次序，不代表半年内连续持仓路径"
   },
   "categories": {
@@ -68,6 +77,10 @@
     {
       "code": "159919",
       "name": "嘉实沪深300ETF"
+    },
+    {
+      "code": "159915",
+      "name": "易方达创业板ETF"
     }
   ],
   "series": {
@@ -550,6 +563,126 @@
           ]
         }
       }
+    },
+    "159915": {
+      "total_shares_100m": [
+        39.224693,
+        62.270874,
+        90.416266,
+        180.556266,
+        221.481236,
+        312.481236,
+        435.721236,
+        401.261236,
+        315.071236
+      ],
+      "categories": {
+        "national_team": {
+          "shares_100m": [
+            4.203033,
+            4.504265,
+            5.224636,
+            5.561309,
+            6.002759,
+            119.632389,
+            149.317972,
+            170.197842,
+            170.197842
+          ],
+          "ratio_pct": [
+            10.715274,
+            7.233342,
+            5.778425,
+            3.080098,
+            2.710279,
+            38.284663,
+            34.269152,
+            42.41572,
+            54.018845
+          ],
+          "precision": [
+            "lower_bound",
+            "lower_bound",
+            "lower_bound",
+            "lower_bound",
+            "lower_bound",
+            "lower_bound",
+            "lower_bound",
+            "lower_bound",
+            "lower_bound"
+          ]
+        },
+        "other_institution": {
+          "shares_100m": [
+            6.910033,
+            18.280966,
+            27.578092,
+            74.523656,
+            66.556798,
+            42.180633,
+            52.725813,
+            49.073872,
+            47.288051
+          ],
+          "ratio_pct": [
+            17.616539,
+            29.357169,
+            30.501251,
+            41.274478,
+            30.050761,
+            13.498613,
+            12.100813,
+            12.229906,
+            15.008686
+          ],
+          "precision": [
+            "upper_bound",
+            "upper_bound",
+            "upper_bound",
+            "upper_bound",
+            "upper_bound",
+            "upper_bound",
+            "upper_bound",
+            "upper_bound",
+            "upper_bound"
+          ]
+        },
+        "individual": {
+          "shares_100m": [
+            13.418104,
+            19.735079,
+            32.512852,
+            67.09048,
+            109.006787,
+            108.801526,
+            186.120495,
+            136.622998,
+            66.691941
+          ],
+          "ratio_pct": [
+            34.208308,
+            31.69231,
+            35.959074,
+            37.157658,
+            49.217166,
+            34.818579,
+            42.715498,
+            34.048392,
+            21.167258
+          ],
+          "precision": [
+            "exact",
+            "exact",
+            "exact",
+            "exact",
+            "exact",
+            "exact",
+            "exact",
+            "exact",
+            "exact"
+          ]
+        }
+      }
     }
   },
   "aggregate": {
@@ -722,6 +855,18 @@
       "national_team_account_count": 2
     },
     {
+      "fund_code": "159915",
+      "period_end": "2021-12-31",
+      "report_type": "annual",
+      "report_send_date": "2022-03-30",
+      "official_upload_date": "2022-03-30",
+      "instance_id": "efunds-159915-2021-annual",
+      "official_pdf_url": "https://cdn.efunds.com.cn/owch/data/notice/20220330/易方达创业板交易型开放式指数证券投资基金2021年年度报告.pdf?from=org",
+      "holder_table_page": 75,
+      "source_page_numbers": "75;76",
+      "national_team_account_count": 1
+    },
+    {
       "fund_code": "510300",
       "period_end": "2022-06-30",
       "report_type": "interim",
@@ -768,6 +913,18 @@
       "holder_table_page": 70,
       "source_page_numbers": "70;71",
       "national_team_account_count": 2
+    },
+    {
+      "fund_code": "159915",
+      "period_end": "2022-06-30",
+      "report_type": "interim",
+      "report_send_date": "2022-08-30",
+      "official_upload_date": "2022-08-30",
+      "instance_id": "efunds-159915-2022-interim",
+      "official_pdf_url": "https://cdn.efunds.com.cn/owch/data/notice/20220830/易方达创业板交易型开放式指数证券投资基金2022年中期报告.pdf?from=org",
+      "holder_table_page": 81,
+      "source_page_numbers": "81;82",
+      "national_team_account_count": 1
     },
     {
       "fund_code": "510300",
@@ -818,6 +975,18 @@
       "national_team_account_count": 2
     },
     {
+      "fund_code": "159915",
+      "period_end": "2022-12-31",
+      "report_type": "annual",
+      "report_send_date": "2023-03-30",
+      "official_upload_date": "2023-03-30",
+      "instance_id": "efunds-159915-2022-annual",
+      "official_pdf_url": "https://cdn.efunds.com.cn/owch/data/notice/20230330/易方达创业板交易型开放式指数证券投资基金2022年年度报告.pdf?from=org",
+      "holder_table_page": 233,
+      "source_page_numbers": "233;234",
+      "national_team_account_count": 1
+    },
+    {
       "fund_code": "510300",
       "period_end": "2023-06-30",
       "report_type": "interim",
@@ -864,6 +1033,18 @@
       "holder_table_page": 68,
       "source_page_numbers": "68;69",
       "national_team_account_count": 2
+    },
+    {
+      "fund_code": "159915",
+      "period_end": "2023-06-30",
+      "report_type": "interim",
+      "report_send_date": "2023-08-30",
+      "official_upload_date": "2023-08-30",
+      "instance_id": "efunds-159915-2023-interim",
+      "official_pdf_url": "https://cdn.efunds.com.cn/owch/data/bulletin/20230830/易方达创业板交易型开放式指数证券投资基金2023年中期报告.pdf?from=org",
+      "holder_table_page": 191,
+      "source_page_numbers": "191;192",
+      "national_team_account_count": 1
     },
     {
       "fund_code": "510300",
@@ -914,6 +1095,18 @@
       "national_team_account_count": 2
     },
     {
+      "fund_code": "159915",
+      "period_end": "2023-12-31",
+      "report_type": "annual",
+      "report_send_date": "2024-03-29",
+      "official_upload_date": "2024-03-29",
+      "instance_id": "efunds-159915-2023-annual",
+      "official_pdf_url": "https://cdn.efunds.com.cn/owch/data/bulletin/20240329/易方达创业板交易型开放式指数证券投资基金2023年年度报告.pdf?from=org",
+      "holder_table_page": 68,
+      "source_page_numbers": "68;69",
+      "national_team_account_count": 1
+    },
+    {
       "fund_code": "510300",
       "period_end": "2024-06-30",
       "report_type": "interim",
@@ -962,6 +1155,18 @@
       "national_team_account_count": 2
     },
     {
+      "fund_code": "159915",
+      "period_end": "2024-06-30",
+      "report_type": "interim",
+      "report_send_date": "2024-08-30",
+      "official_upload_date": "2024-08-30",
+      "instance_id": "efunds-159915-2024-interim",
+      "official_pdf_url": "https://cdn.efunds.com.cn/owch/data/bulletin/20240830/易方达创业板交易型开放式指数证券投资基金2024年中期报告.pdf?from=org",
+      "holder_table_page": 50,
+      "source_page_numbers": "50;51",
+      "national_team_account_count": 2
+    },
+    {
       "fund_code": "510300",
       "period_end": "2024-12-31",
       "report_type": "annual",
@@ -1005,6 +1210,18 @@
       "official_upload_date": "2025-03-27",
       "instance_id": "1250628",
       "official_pdf_url": "http://eid.csrc.gov.cn/fund/disclose/instance_show_pdf_id.do?instanceid=1250628",
+      "holder_table_page": 62,
+      "source_page_numbers": "62;63",
+      "national_team_account_count": 2
+    },
+    {
+      "fund_code": "159915",
+      "period_end": "2024-12-31",
+      "report_type": "annual",
+      "report_send_date": "2025-03-31",
+      "official_upload_date": "2025-03-31",
+      "instance_id": "efunds-159915-2024-annual",
+      "official_pdf_url": "https://cdn.efunds.com.cn/owch/data/bulletin/20250331/易方达创业板交易型开放式指数证券投资基金2024年年度报告.pdf?from=org",
       "holder_table_page": 62,
       "source_page_numbers": "62;63",
       "national_team_account_count": 2
@@ -1058,6 +1275,18 @@
       "national_team_account_count": 2
     },
     {
+      "fund_code": "159915",
+      "period_end": "2025-06-30",
+      "report_type": "interim",
+      "report_send_date": "2025-08-30",
+      "official_upload_date": "2025-08-30",
+      "instance_id": "efunds-159915-2025-interim",
+      "official_pdf_url": "https://cdn.efunds.com.cn/owch/data/bulletin/20250830/易方达创业板交易型开放式指数证券投资基金2025年中期报告.pdf?from=org",
+      "holder_table_page": 48,
+      "source_page_numbers": "48;49",
+      "national_team_account_count": 2
+    },
+    {
       "fund_code": "510300",
       "period_end": "2025-12-31",
       "report_type": "annual",
@@ -1103,6 +1332,18 @@
       "official_pdf_url": "http://eid.csrc.gov.cn/fund/disclose/instance_show_pdf_id.do?instanceid=1451235",
       "holder_table_page": 66,
       "source_page_numbers": "66;67",
+      "national_team_account_count": 2
+    },
+    {
+      "fund_code": "159915",
+      "period_end": "2025-12-31",
+      "report_type": "annual",
+      "report_send_date": "2026-03-31",
+      "official_upload_date": "2026-03-31",
+      "instance_id": "efunds-159915-2025-annual",
+      "official_pdf_url": "https://cdn.efunds.com.cn/owch/data/bulletin/20260331/易方达创业板交易型开放式指数证券投资基金2025年年度报告.pdf?from=org",
+      "holder_table_page": 63,
+      "source_page_numbers": "63;64",
       "national_team_account_count": 2
     }
   ]

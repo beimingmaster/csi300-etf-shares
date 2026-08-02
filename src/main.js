@@ -837,6 +837,24 @@ async function renderHolderAggregate(data, metric, chartId) {
 }
 
 
+async function renderHolderStandalone(data, fund, metric, chartId) {
+  const categories = selectedHolderCategories();
+  const traces = categories.map((categoryKey) => holderTrace(
+    data,
+    data.series[fund.code].categories[categoryKey][metric],
+    categoryKey,
+    metric,
+  ));
+  const layout = holderLayout(
+    metric,
+    true,
+    `${chartId}-${metric}-${categories.join("-")}-${prefersDark.matches}`,
+  );
+  await Plotly.react(chartId, traces, layout, plotConfig);
+  finishChart(chartId);
+}
+
+
 async function renderHolderFund(data, fund) {
   const categories = selectedHolderCategories();
   const traces = categories.map((categoryKey) => holderTrace(
@@ -870,12 +888,30 @@ function populateHolderSummary(data) {
 async function renderHolders(data) {
   currentHolderData = data;
   populateHolderSummary(data);
+  const aggregateFunds = data.funds.filter((fund) => (
+    data.metadata.aggregate_fund_codes.includes(fund.code)
+  ));
+  const standaloneFund = data.funds.find((fund) => (
+    data.metadata.standalone_fund_codes.includes(fund.code)
+  ));
   const grid = document.querySelector("#holder-fund-grid");
-  grid.innerHTML = data.funds.map(holderFundCard).join("");
+  grid.innerHTML = aggregateFunds.map(holderFundCard).join("");
   await Promise.all([
     renderHolderAggregate(data, "shares_100m", "holder-aggregate-shares-chart"),
     renderHolderAggregate(data, "ratio_pct", "holder-aggregate-ratio-chart"),
-    ...data.funds.map((fund) => renderHolderFund(data, fund)),
+    ...aggregateFunds.map((fund) => renderHolderFund(data, fund)),
+    renderHolderStandalone(
+      data,
+      standaloneFund,
+      "shares_100m",
+      "holder-chinext-shares-chart",
+    ),
+    renderHolderStandalone(
+      data,
+      standaloneFund,
+      "ratio_pct",
+      "holder-chinext-ratio-chart",
+    ),
   ]);
 }
 
@@ -967,7 +1003,9 @@ async function loadHolderData() {
     if (
       !Array.isArray(data.periods)
       || data.periods.length === 0
-      || data.funds.length !== 4
+      || data.funds.length !== 5
+      || data.metadata.aggregate_fund_codes.length !== 4
+      || data.metadata.standalone_fund_codes.length !== 1
       || data.metadata.disclosure_frequency !== "semiannual"
     ) {
       throw new Error("holder data contract is incomplete");

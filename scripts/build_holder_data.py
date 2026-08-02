@@ -16,7 +16,9 @@ SOURCE_PATH = ROOT / "scripts" / "data" / "holder-structure-source.csv"
 JSON_PATH = ROOT / "public" / "data" / "holder-structure.json"
 CSV_PATH = ROOT / "public" / "data" / "holder-structure.csv"
 
-FUND_ORDER = ("510300", "510310", "510330", "159919")
+AGGREGATE_FUND_ORDER = ("510300", "510310", "510330", "159919")
+STANDALONE_FUND_ORDER = ("159915",)
+FUND_ORDER = AGGREGATE_FUND_ORDER + STANDALONE_FUND_ORDER
 CATEGORY_ORDER = ("national_team", "other_institution", "individual")
 CATEGORIES = {
     "national_team": {
@@ -160,7 +162,11 @@ def build_payload(rows: list[dict[str, Any]]) -> dict[str, Any]:
         category: [] for category in CATEGORY_ORDER
     }
     for period in periods:
-        period_rows = by_period[period]
+        period_rows = [
+            row
+            for row in by_period[period]
+            if row["fund_code"] in AGGREGATE_FUND_ORDER
+        ]
         total = sum(row["total_shares"] for row in period_rows)
         aggregate_totals.append(total)
         for category in CATEGORY_ORDER:
@@ -185,7 +191,7 @@ def build_payload(rows: list[dict[str, Any]]) -> dict[str, Any]:
 
     latest_disclosure = max(row["official_upload_date"] for row in rows)
     return {
-        "schema_version": "1.0",
+        "schema_version": "1.1",
         "metadata": {
             "start_period": periods[0],
             "latest_period": periods[-1],
@@ -193,12 +199,14 @@ def build_payload(rows: list[dict[str, Any]]) -> dict[str, Any]:
             "period_count": len(periods),
             "report_count": len(rows),
             "disclosure_frequency": "semiannual",
-            "source_name": "中国证监会资本市场统一信息披露平台",
+            "source_name": "中国证监会资本市场统一信息披露平台及基金管理人官网",
             "source_url": "http://eid.csrc.gov.cn/fund/",
+            "aggregate_fund_codes": list(AGGREGATE_FUND_ORDER),
+            "standalone_fund_codes": list(STANDALONE_FUND_ORDER),
             "q1_2026_holder_data_available": False,
             "national_team_definition": "定期报告前十名持有人中明确命名的中央汇金和中国证券金融账户合计",
             "other_institution_definition": "可比机构份额扣除已识别国家队份额，包含保险、券商、银行、资管等，不含ETF联接基金",
-            "aggregate_definition": "四只基金报告原始份额直接相加，占比为合计分类份额除以合计总份额，不代表资产金额",
+            "aggregate_definition": "四只沪深300ETF报告原始份额直接相加，占比为合计分类份额除以合计总份额；159915仅单独展示，不进入汇总",
             "connection_line_note": "连接线仅辅助观察中报和年报披露点次序，不代表半年内连续持仓路径",
         },
         "categories": CATEGORIES,
