@@ -9,6 +9,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 JSON_PATH = ROOT / "public" / "data" / "etf-shares.json"
 CSV_PATH = ROOT / "public" / "data" / "etf-shares.csv"
+HOLDER_JSON_PATH = ROOT / "public" / "data" / "holder-structure.json"
+HOLDER_CSV_PATH = ROOT / "public" / "data" / "holder-structure.csv"
 EXPECTED_CODES = {"510300", "510310", "510330", "159919"}
 
 
@@ -73,6 +75,68 @@ class DataContractTest(unittest.TestCase):
         self.assertGreaterEqual(len(rows), self.data["metadata"]["fund_observations"])
         self.assertEqual({row["code"] for row in rows}, EXPECTED_CODES)
         self.assertTrue(all(float(row["shares_100m"]) > 0 for row in rows))
+
+
+class HolderDataContractTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.data = json.loads(HOLDER_JSON_PATH.read_text(encoding="utf-8"))
+
+    def test_complete_semiannual_panel_and_latest_disclosure(self):
+        periods = self.data["periods"]
+        metadata = self.data["metadata"]
+
+        self.assertEqual(len(periods), 9)
+        self.assertEqual(periods, sorted(set(periods)))
+        self.assertEqual(periods[0], "2021-12-31")
+        self.assertEqual(periods[-1], "2025-12-31")
+        self.assertEqual(metadata["latest_disclosure_date"], "2026-03-31")
+        self.assertEqual(metadata["disclosure_frequency"], "semiannual")
+        self.assertFalse(metadata["q1_2026_holder_data_available"])
+        self.assertEqual(metadata["report_count"], len(periods) * 4)
+        self.assertEqual({fund["code"] for fund in self.data["funds"]}, EXPECTED_CODES)
+
+    def test_holder_categories_and_aggregate_are_consistent(self):
+        categories = self.data["categories"]
+        self.assertEqual(
+            set(categories),
+            {"national_team", "other_institution", "individual"},
+        )
+        self.assertEqual(categories["national_team"]["precision"], "lower_bound")
+        self.assertEqual(categories["other_institution"]["precision"], "upper_bound")
+        self.assertEqual(categories["individual"]["precision"], "exact")
+
+        periods = self.data["periods"]
+        aggregate = self.data["aggregate"]
+        for category in categories:
+            aggregate_series = aggregate["categories"][category]
+            self.assertEqual(len(aggregate_series["shares_100m"]), len(periods))
+            self.assertEqual(len(aggregate_series["ratio_pct"]), len(periods))
+            for index in range(len(periods)):
+                expected_shares = sum(
+                    self.data["series"][code]["categories"][category]["shares_100m"][index]
+                    for code in EXPECTED_CODES
+                )
+                self.assertAlmostEqual(
+                    aggregate_series["shares_100m"][index],
+                    expected_shares,
+                    places=5,
+                )
+                self.assertGreaterEqual(aggregate_series["ratio_pct"][index], 0)
+                self.assertLessEqual(aggregate_series["ratio_pct"][index], 100)
+
+    def test_public_holder_csv_has_three_rows_per_report(self):
+        with HOLDER_CSV_PATH.open(encoding="utf-8", newline="") as handle:
+            rows = list(csv.DictReader(handle))
+
+        self.assertEqual(len(rows), self.data["metadata"]["report_count"] * 3)
+        self.assertEqual({row["fund_code"] for row in rows}, EXPECTED_CODES)
+        self.assertEqual(
+            {row["category"] for row in rows},
+            {"national_team", "other_institution", "individual"},
+        )
+        self.assertTrue(all(int(row["holder_shares"]) > 0 for row in rows))
+        self.assertTrue(all(row["official_pdf_url"].startswith("http://eid.csrc.gov.cn/") for row in rows))
 
 
 if __name__ == "__main__":

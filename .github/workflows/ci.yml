@@ -21,6 +21,8 @@ jobs:
         with:
           python-version: "3.12"
       - run: npm ci
-      - run: python -m py_compile scripts/update_data.py
+      - run: python -m py_compile scripts/update_data.py scripts/build_holder_data.py
+      - run: python scripts/build_holder_data.py
+      - run: git diff --exit-code -- public/data/holder-structure.csv public/data/holder-structure.json
       - run: npm test
       - run: npm run build

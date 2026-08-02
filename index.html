@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="基于上交所和深交所官方日终份额数据，展示四只主流沪深300ETF最近十年份额趋势。"
+      content="展示四只主流沪深300ETF最近十年的官方日终份额，以及国家队、其他机构和个人的半年度持有趋势。"
     />
     <meta name="theme-color" content="#eef1f2" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#10171c" media="(prefers-color-scheme: dark)" />
@@ -24,9 +24,9 @@
         "@context": "https://schema.org",
         "@type": "Dataset",
         "name": "A股主流沪深300ETF日终份额",
-        "description": "四只主流沪深300ETF最近十年的交易所官方日终份额数据。",
+        "description": "四只主流沪深300ETF最近十年的交易所官方日终份额，以及中报和年报披露的持有人结构数据。",
         "url": "https://etf.zluna.ai/",
-        "license": "https://github.com/chat2dev/csi300-etf-shares/blob/main/LICENSE",
+        "license": "https://github.com/beimingmaster/csi300-etf-shares/blob/main/LICENSE",
         "creator": {
           "@type": "Organization",
           "name": "zluna.ai"
@@ -49,6 +49,7 @@
         </a>
         <nav aria-label="主导航">
           <a href="#aggregate">汇总</a>
+          <a href="#holders">持有人</a>
           <a href="#funds">单品</a>
           <a href="#methodology">方法</a>
         </nav>
@@ -108,12 +109,154 @@
         </div>
         <div class="chart-shell chart-shell-large">
           <div class="chart-loading" aria-hidden="true"></div>
+          <div class="chart-tools" role="group" aria-label="汇总图缩放控制">
+            <button type="button" data-chart-action="zoom-in" data-chart-id="aggregate-chart" aria-label="放大汇总图">+</button>
+            <button type="button" data-chart-action="zoom-out" data-chart-id="aggregate-chart" aria-label="缩小汇总图">−</button>
+            <button type="button" data-chart-action="reset" data-chart-id="aggregate-chart">重置</button>
+          </div>
           <div
             class="chart"
             id="aggregate-chart"
             role="img"
             aria-label="四只主流沪深300ETF最近十年份额统计合计趋势图"
           ></div>
+        </div>
+      </section>
+
+      <section class="holders-section" id="holders" aria-labelledby="holders-title">
+        <div class="section-heading holders-heading">
+          <p class="section-kicker">中报与年报 / 半年度快照</p>
+          <h2 id="holders-title">谁在持有这四只ETF</h2>
+          <p>
+            从基金定期报告原表还原国家队、其他机构和个人持有份额。点位是报告期末快照，连接线仅用于观察披露次序。
+          </p>
+        </div>
+
+        <div class="holder-status" aria-label="持有人数据状态">
+          <div>
+            <span>最新持仓期末</span>
+            <strong id="holder-latest-period">-</strong>
+          </div>
+          <div>
+            <span>最新公开日期</span>
+            <strong id="holder-latest-disclosure">-</strong>
+          </div>
+          <p>
+            2026年Q1季度报告不披露持有人结构，因此没有Q1分类点位；最新可用数据来自2025年年报。
+          </p>
+        </div>
+
+        <div class="holder-controls">
+          <fieldset id="holder-category-filter">
+            <legend>选择持有人类别</legend>
+            <label class="holder-option holder-option-national">
+              <input type="checkbox" value="national_team" checked />
+              <span class="holder-swatch" aria-hidden="true"></span>
+              <span>
+                <strong>国家队（已识别）</strong>
+                <small>中央汇金/证金可见账户，下限</small>
+              </span>
+            </label>
+            <label class="holder-option holder-option-institution">
+              <input type="checkbox" value="other_institution" checked />
+              <span class="holder-swatch" aria-hidden="true"></span>
+              <span>
+                <strong>其他机构（含保险）</strong>
+                <small>扣除已识别国家队后的上限</small>
+              </span>
+            </label>
+            <label class="holder-option holder-option-individual">
+              <input type="checkbox" value="individual" checked />
+              <span class="holder-swatch" aria-hidden="true"></span>
+              <span>
+                <strong>个人</strong>
+                <small>定期报告原表精确值</small>
+              </span>
+            </label>
+          </fieldset>
+          <p class="filter-message" id="holder-filter-message" aria-live="polite"></p>
+          <a class="data-download" href="/data/holder-structure.csv" download>
+            下载持有人明细 CSV
+          </a>
+        </div>
+
+        <div class="holder-aggregate-grid">
+          <article class="holder-chart-panel">
+            <header>
+              <div>
+                <p class="panel-index">01 / 四只汇总</p>
+                <h3>持有份额趋势</h3>
+              </div>
+              <span>亿份</span>
+            </header>
+            <div class="chart-shell">
+              <div class="chart-loading" aria-hidden="true"></div>
+              <div class="chart-tools" role="group" aria-label="持有人汇总份额图缩放控制">
+                <button type="button" data-chart-action="zoom-in" data-chart-id="holder-aggregate-shares-chart" aria-label="放大持有人汇总份额图">+</button>
+                <button type="button" data-chart-action="zoom-out" data-chart-id="holder-aggregate-shares-chart" aria-label="缩小持有人汇总份额图">−</button>
+                <button type="button" data-chart-action="reset" data-chart-id="holder-aggregate-shares-chart">重置</button>
+              </div>
+              <div
+                class="chart holder-aggregate-chart"
+                id="holder-aggregate-shares-chart"
+                role="img"
+                aria-label="四只沪深300ETF按持有人类别汇总的份额趋势图"
+              ></div>
+            </div>
+          </article>
+
+          <article class="holder-chart-panel">
+            <header>
+              <div>
+                <p class="panel-index">02 / 四只汇总</p>
+                <h3>持有占比趋势</h3>
+              </div>
+              <span>占总份额</span>
+            </header>
+            <div class="chart-shell">
+              <div class="chart-loading" aria-hidden="true"></div>
+              <div class="chart-tools" role="group" aria-label="持有人汇总占比图缩放控制">
+                <button type="button" data-chart-action="zoom-in" data-chart-id="holder-aggregate-ratio-chart" aria-label="放大持有人汇总占比图">+</button>
+                <button type="button" data-chart-action="zoom-out" data-chart-id="holder-aggregate-ratio-chart" aria-label="缩小持有人汇总占比图">−</button>
+                <button type="button" data-chart-action="reset" data-chart-id="holder-aggregate-ratio-chart">重置</button>
+              </div>
+              <div
+                class="chart holder-aggregate-chart"
+                id="holder-aggregate-ratio-chart"
+                role="img"
+                aria-label="四只沪深300ETF按持有人类别汇总的占比趋势图"
+              ></div>
+            </div>
+          </article>
+        </div>
+
+        <div class="holder-fund-heading">
+          <div>
+            <p class="panel-index">03 / 分基金</p>
+            <h3>四只ETF分别看</h3>
+          </div>
+          <div class="metric-switch" role="group" aria-label="切换分基金图表指标">
+            <button type="button" data-holder-metric="shares_100m" aria-pressed="true">份额</button>
+            <button type="button" data-holder-metric="ratio_pct" aria-pressed="false">占比</button>
+          </div>
+        </div>
+        <div class="holder-fund-grid" id="holder-fund-grid" aria-live="polite"></div>
+
+        <div class="holder-notes">
+          <p>
+            “国家队”在此指前十名持有人中明确命名的中央汇金和中国证券金融账户。未进入前十不等于持仓为零，因此国家队曲线是已识别下限。
+          </p>
+          <p>
+            “其他机构”包含保险、券商、银行、资管等，并排除ETF联接基金；由于国家队仅能识别下限，该序列是扣除后的上限，不等于保险单一类别。
+          </p>
+          <p>
+            四只汇总按报告原始份额直接相加，占比用合计分类份额除以合计总份额；不同ETF每份净值不同，因此不代表资产金额或资金流。
+          </p>
+        </div>
+
+        <div class="data-error" id="holder-data-error" role="alert" hidden>
+          <strong>持有人数据暂时无法载入。</strong>
+          <span>日份额图仍可正常使用，请稍后重试持有人明细。</span>
         </div>
       </section>
 
@@ -146,7 +289,7 @@
           <article>
             <h3>原始来源</h3>
             <p>
-              份额来自上海证券交易所与深圳证券交易所公开接口，交易日历来自中证指数官网。
+              日份额来自上交所与深交所，交易日历来自中证指数；持有人数据来自证监会统一披露平台原始中报和年报。
             </p>
           </article>
           <article>
@@ -161,6 +304,12 @@
               510310于2024-09-20实施基金份额合并，图中断点不是普通净赎回。事件已依据基金管理人公告核验。
             </p>
           </article>
+          <article>
+            <h3>持有人更新频率</h3>
+            <p>
+              每年3月末随年报更新上一年末数据，每年8月末随中报更新当年6月末数据。一季报和三季报没有持有人分类表。
+            </p>
+          </article>
         </div>
       </section>
     </main>
@@ -168,7 +317,7 @@
     <footer>
       <p>数据研究展示，不构成投资建议。原始份额以交易所最终披露为准。</p>
       <div class="footer-links">
-        <a href="https://github.com/chat2dev/csi300-etf-shares">GitHub</a>
+        <a href="https://github.com/beimingmaster/csi300-etf-shares">GitHub</a>
         <a href="/data/etf-shares.csv" download>CSV 数据</a>
       </div>
     </footer>

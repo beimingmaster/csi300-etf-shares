@@ -1,6 +1,6 @@
 # 沪深300ETF十年份额观察
 
-一个纯静态数据站点，展示四只主流沪深300ETF最近十年的交易所日终份额、分别趋势和统计合计趋势。
+一个纯静态数据站点，展示四只主流沪深300ETF最近十年的交易所日终份额，以及国家队、其他机构和个人的半年度持有份额与占比趋势。
 
 线上地址：<https://etf.zluna.ai>
 
@@ -23,8 +23,11 @@
 - 图表使用四只基金都具备份额记录的共同交易日，不插值、不补零。
 - 汇总曲线是四只基金原始份额的逐日算术合计。不同ETF每份净值不同，因此合计不代表净资产或资金流。
 - 510310在2024-09-20实施基金份额合并，数据脚本已将该大幅变化登记为核验过的公司行动。
+- 持有人结构来自证监会资本市场统一信息披露平台的基金中报和年报原PDF，目前覆盖2021年末至2025年末共9个半年度点、36份报告。
+- “国家队”仅合计前十名持有人中明确命名的中央汇金和中国证券金融账户，是已识别下限；“其他机构”是可比机构份额扣除该下限后的上限，包含保险、券商、银行和资管等，不含ETF联接基金。
+- 一季报和三季报不披露持有人结构或上市基金前十名持有人，不能从日度总份额变化推断2026年Q1的国家队、机构或个人持仓。
 
-生成数据位于 `public/data/etf-shares.json` 和 `public/data/etf-shares.csv`。GitHub Actions 每天北京时间18:30刷新最近21个自然日，提交结果并直接发布到Cloudflare Pages。
+日份额数据位于 `public/data/etf-shares.json` 和 `public/data/etf-shares.csv`；持有人数据位于 `public/data/holder-structure.json` 和 `public/data/holder-structure.csv`。GitHub Actions每天北京时间18:30刷新最近21个自然日的日份额，提交结果并直接发布到Cloudflare Pages。持有人数据在年报和中报公开后更新，不做日频插值。
 
 ## 本地开发
 
@@ -32,6 +35,7 @@
 npm install
 python3 -m pip install -r scripts/requirements.txt
 python3 scripts/update_data.py
+python3 scripts/build_holder_data.py
 npm test
 npm run dev
 ```
@@ -48,6 +52,7 @@ npm run build
 
 - `Validate` 在提交和拉取请求时验证数据契约并构建网站。
 - `Refresh ETF data` 每日抓取官方源、验证异常变动、测试、构建、提交生成数据并部署纯静态产物。
+- 持有人源快照保存在 `scripts/data/holder-structure-source.csv`，生成脚本会检查四只基金逐期齐全、机构/个人/联接份额闭合以及国家队下限不超过机构份额。
 - `Deploy to Cloudflare Pages` 在普通 `main` 分支提交后重新构建并部署纯静态产物。
 - Cloudflare Pages使用免费Direct Upload，不启用Functions、KV、D1、R2或其他存储服务。
 
