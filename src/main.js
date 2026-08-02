@@ -90,6 +90,7 @@ function commonLayout(theme, height) {
       font: { color: theme.text, size: 13 },
     },
     hovermode: "x unified",
+    dragmode: false,
     showlegend: false,
     xaxis: {
       type: "date",
@@ -200,9 +201,254 @@ function bindVisibleRangeAutorange(chartId) {
 }
 
 
+function bindPressCursor(chartId) {
+  const chart = document.querySelector(`#${chartId}`);
+  if (!chart?.data || !chart._fullLayout?.xaxis || !chart._fullLayout?.yaxis) {
+    return;
+  }
+  chart.pressCursorCleanup?.();
+
+  const line = document.createElement("div");
+  line.className = "chart-press-line";
+  line.hidden = true;
+  line.setAttribute("aria-hidden", "true");
+  const readout = document.createElement("div");
+  readout.className = "chart-press-readout";
+  readout.hidden = true;
+  readout.setAttribute("aria-live", "off");
+  chart.append(line, readout);
+
+  let active = false;
+  let pending = false;
+  let holdTimer = null;
+  let startPoint = null;
+  let latestPoint = null;
+  const byTimestamp = new Map();
+  const pointIndexes = chart.data.map((trace) => {
+    const indexes = new Map();
+    (trace.x || []).forEach((xValue, pointNumber) => {
+      const timestamp = new Date(xValue).getTime();
+      if (Number.isFinite(timestamp)) {
+        indexes.set(timestamp, pointNumber);
+        if (!byTimestamp.has(timestamp)) {
+          byTimestamp.set(timestamp, xValue);
+        }
+      }
+    });
+    return indexes;
+  });
+  const allTimestamps = [...byTimestamp.entries()]
+    .sort((left, right) => left[0] - right[0]);
+
+  const clearHoldTimer = () => {
+    if (holdTimer !== null) {
+      window.clearTimeout(holdTimer);
+      holdTimer = null;
+    }
+  };
+
+  const timestamps = () => {
+    const axisRange = chart._fullLayout.xaxis.range
+      ?.map((value) => new Date(value).getTime());
+    const visibleValues = allTimestamps
+      .filter(([timestamp]) => (
+        !axisRange
+        || !axisRange.every(Number.isFinite)
+        || (timestamp >= axisRange[0] && timestamp <= axisRange[1])
+      ))
+      .sort((left, right) => left[0] - right[0]);
+    return visibleValues.length > 0 ? visibleValues : allTimestamps;
+  };
+
+  const showAt = (clientX) => {
+    const xaxis = chart._fullLayout?.xaxis;
+    const yaxis = chart._fullLayout?.yaxis;
+    if (!xaxis || !yaxis) {
+      return;
+    }
+    const candidates = timestamps();
+    if (candidates.length === 0) {
+      return;
+    }
+    const rect = chart.getBoundingClientRect();
+    const plotX = Math.min(
+      Math.max(clientX - rect.left - xaxis._offset, 0),
+      xaxis._length,
+    );
+    const targetTimestamp = new Date(xaxis.p2d(plotX)).getTime();
+    const [selectedTimestamp, selectedX] = candidates.reduce((nearest, candidate) => (
+      Math.abs(candidate[0] - targetTimestamp) < Math.abs(nearest[0] - targetTimestamp)
+        ? candidate
+        : nearest
+    ));
+    const hoverPoints = chart.data.flatMap((trace, traceIndex) => {
+      const pointNumber = pointIndexes[traceIndex].get(selectedTimestamp) ?? -1;
+      return pointNumber >= 0 ? [{ trace, pointNumber }] : [];
+    });
+    if (hoverPoints.length === 0) {
+      return;
+    }
+    const lineX = xaxis._offset + xaxis.d2p(selectedX);
+    line.style.left = `${lineX}px`;
+    line.style.top = `${yaxis._offset}px`;
+    line.style.height = `${yaxis._length}px`;
+    line.hidden = false;
+    const date = document.createElement("time");
+    date.dateTime = new Date(selectedTimestamp).toISOString();
+    date.textContent = dateFormat.format(new Date(selectedTimestamp));
+    const rows = hoverPoints.map(({ trace, pointNumber }) => {
+      const row = document.createElement("div");
+      row.className = "chart-press-row";
+      const swatch = document.createElement("span");
+      swatch.className = "chart-press-swatch";
+      swatch.style.backgroundColor = trace.line?.color || trace.marker?.color || getTheme().accent;
+      const label = document.createElement("span");
+      label.className = "chart-press-label";
+      label.textContent = trace.name || "当前值";
+      const value = document.createElement("strong");
+      const unit = trace.meta?.pressUnit || "";
+      value.textContent = `${numberFormat.format(Number(trace.y[pointNumber]))}${unit}`;
+      row.append(swatch, label, value);
+      const precision = trace.customdata?.[pointNumber];
+      if (precision) {
+        const detail = document.createElement("small");
+        detail.textContent = precision;
+        row.append(detail);
+      }
+      return row;
+    });
+    readout.replaceChildren(date, ...rows);
+    readout.hidden = false;
+    const readoutWidth = readout.getBoundingClientRect().width;
+    const preferredLeft = lineX > chart.clientWidth * 0.58
+      ? lineX - readoutWidth - 12
+      : lineX + 12;
+    readout.style.left = `${Math.min(
+      Math.max(preferredLeft, 8),
+      chart.clientWidth - readoutWidth - 8,
+    )}px`;
+    readout.style.top = `${yaxis._offset + 10}px`;
+    chart.classList.add("has-press-cursor");
+    Plotly.Fx.unhover(chart);
+  };
+
+  const releaseCapture = (pointerId) => {
+    if (chart.hasPointerCapture?.(pointerId)) {
+      chart.releasePointerCapture(pointerId);
+    }
+  };
+
+  const activate = (point) => {
+    clearHoldTimer();
+    pending = false;
+    active = true;
+    chart.classList.add("is-pressing");
+    try {
+      chart.setPointerCapture?.(point.pointerId);
+    } catch {
+      // The browser may have converted the gesture into page scrolling.
+    }
+    showAt(point.clientX);
+  };
+
+  const cancelPending = () => {
+    clearHoldTimer();
+    pending = false;
+    startPoint = null;
+    latestPoint = null;
+  };
+
+  const onPointerDown = (event) => {
+    if (!event.isPrimary || (event.pointerType === "mouse" && event.button !== 0)) {
+      return;
+    }
+    startPoint = {
+      clientX: event.clientX,
+      clientY: event.clientY,
+      pointerId: event.pointerId,
+      pointerType: event.pointerType,
+    };
+    latestPoint = startPoint;
+    if (event.pointerType === "mouse") {
+      event.preventDefault();
+      activate(startPoint);
+      return;
+    }
+    pending = true;
+    holdTimer = window.setTimeout(() => activate(latestPoint), 180);
+  };
+
+  const onPointerMove = (event) => {
+    if (pending && startPoint) {
+      latestPoint = {
+        clientX: event.clientX,
+        clientY: event.clientY,
+        pointerId: event.pointerId,
+        pointerType: event.pointerType,
+      };
+      const deltaX = event.clientX - startPoint.clientX;
+      const deltaY = event.clientY - startPoint.clientY;
+      if (Math.abs(deltaY) > 10 && Math.abs(deltaY) > Math.abs(deltaX)) {
+        cancelPending();
+        return;
+      }
+      if (Math.abs(deltaX) > 10) {
+        activate(latestPoint);
+      }
+    }
+    if (!active) {
+      return;
+    }
+    event.preventDefault();
+    showAt(event.clientX);
+  };
+
+  const onPointerEnd = (event) => {
+    if (pending) {
+      cancelPending();
+    }
+    if (!active) {
+      return;
+    }
+    active = false;
+    chart.classList.remove("is-pressing");
+    releaseCapture(event.pointerId);
+    hide();
+  };
+
+  const hide = () => {
+    line.hidden = true;
+    readout.hidden = true;
+    chart.classList.remove("has-press-cursor", "is-pressing");
+    Plotly.Fx.unhover(chart);
+  };
+
+  const onRelayout = () => hide();
+  chart.addEventListener("pointerdown", onPointerDown, { passive: false });
+  chart.addEventListener("pointermove", onPointerMove, { passive: false });
+  chart.addEventListener("pointerup", onPointerEnd);
+  chart.addEventListener("pointercancel", onPointerEnd);
+  chart.on("plotly_relayout", onRelayout);
+  chart.pressCursorHide = hide;
+  chart.pressCursorCleanup = () => {
+    cancelPending();
+    chart.removeEventListener("pointerdown", onPointerDown);
+    chart.removeEventListener("pointermove", onPointerMove);
+    chart.removeEventListener("pointerup", onPointerEnd);
+    chart.removeEventListener("pointercancel", onPointerEnd);
+    chart.removeListener?.("plotly_relayout", onRelayout);
+    line.remove();
+    readout.remove();
+    delete chart.pressCursorHide;
+    delete chart.pressCursorCleanup;
+  };
+}
+
+
 function finishChart(chartId) {
   revealChart(chartId);
   bindVisibleRangeAutorange(chartId);
+  bindPressCursor(chartId);
 }
 
 
@@ -219,6 +465,7 @@ function chartDateBounds(chart) {
 
 
 async function resetChart(chart) {
+  chart.pressCursorHide?.();
   await Plotly.relayout(chart, {
     "xaxis.autorange": true,
     "yaxis.autorange": true,
@@ -227,6 +474,7 @@ async function resetChart(chart) {
 
 
 async function zoomChart(chart, factor) {
+  chart.pressCursorHide?.();
   const bounds = chartDateBounds(chart);
   const currentRange = chart._fullLayout?.xaxis?.range || chart.layout?.xaxis?.range;
   if (!bounds || !currentRange) {
@@ -305,8 +553,10 @@ async function renderAggregate(data) {
   const trace = {
     type: "scatter",
     mode: "lines",
+    name: "四只合计",
     x: data.dates,
     y: data.aggregate.values,
+    meta: { pressUnit: " 亿份" },
     line: { color: theme.accent, width: 2.6 },
     fill: "tozeroy",
     fillcolor: prefersDark.matches
@@ -402,8 +652,10 @@ async function renderFundChart(data, fund) {
   const trace = {
     type: "scatter",
     mode: "lines",
+    name: fund.code,
     x: data.dates,
     y: data.series[fund.code],
+    meta: { pressUnit: " 亿份" },
     line: { color: fund.color, width: 2.2, dash: fund.line_dash },
     hovertemplate: "%{x|%Y-%m-%d}<br><b>%{y:.2f} 亿份</b><extra></extra>",
   };
@@ -495,6 +747,7 @@ function holderTrace(data, values, categoryKey, metric) {
       line: { color: theme.paper, width: 1 },
     },
     customdata: data.periods.map(() => category.precision_label),
+    meta: { pressUnit: metric === "ratio_pct" ? "%" : " 亿份" },
     hovertemplate: [
       "%{x|%Y-%m-%d}",
       `<b>%{y:.2f}${suffix}</b>`,
@@ -514,7 +767,7 @@ function holderLayout(metric, showLegend, revisionKey) {
     ? { l: 50, r: 10, t: 32, b: showLegend ? 150 : 54 }
     : { l: 62, r: 16, t: 34, b: showLegend ? 94 : 54 };
   layout.height = mobile && showLegend ? 460 : layout.height;
-  layout.dragmode = "zoom";
+  layout.dragmode = false;
   layout.showlegend = showLegend;
   layout.uirevision = revisionKey;
   layout.xaxis.tickformat = "%Y-%m";

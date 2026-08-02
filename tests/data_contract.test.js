@@ -35,6 +35,8 @@ test("the page exposes all required static data views", async () => {
   assert.match(script, /renderAggregate\(data\)/);
   assert.match(script, /renderHolderAggregate/);
   assert.match(script, /data-chart-action/);
+  assert.match(script, /bindPressCursor/);
+  assert.match(script, /chart-press-readout/);
   assert.match(script, /"yaxis\.autorange": true/);
 });
 

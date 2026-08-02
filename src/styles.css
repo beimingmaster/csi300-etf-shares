@@ -438,6 +438,17 @@ h1 {
   line-height: 1.75;
 }
 
+.section-heading .interaction-hint {
+  width: fit-content;
+  margin-top: 18px;
+  padding: 7px 11px;
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--line));
+  border-radius: 999px;
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+  font: 560 11px/1.45 "IBM Plex Sans Variable", sans-serif;
+}
+
 .compact-heading {
   margin-bottom: 52px;
 }
@@ -759,6 +770,83 @@ h1 {
   width: 100%;
   min-height: 360px;
   opacity: 0;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.chart.is-pressing {
+  cursor: ew-resize;
+}
+
+.chart-press-line {
+  position: absolute;
+  z-index: 3;
+  width: 0;
+  pointer-events: none;
+  border-left: 2px dashed var(--accent-strong);
+  filter: drop-shadow(0 0 2px var(--surface));
+}
+
+.chart-press-readout {
+  position: absolute;
+  z-index: 4;
+  min-width: 190px;
+  max-width: min(250px, calc(100% - 16px));
+  padding: 12px 13px;
+  pointer-events: none;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--annotation-bg) 94%, transparent);
+  box-shadow: 0 12px 30px color-mix(in srgb, var(--text) 12%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.chart-press-readout time {
+  display: block;
+  margin-bottom: 9px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+  color: var(--text-muted);
+  font: 600 11px/1.3 "IBM Plex Mono", monospace;
+}
+
+.chart-press-row {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+}
+
+.chart-press-row + .chart-press-row {
+  margin-top: 7px;
+}
+
+.chart-press-swatch {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.chart-press-label {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chart-press-row strong {
+  font: 600 12px/1.3 "IBM Plex Mono", monospace;
+}
+
+.chart-press-row small {
+  grid-column: 2 / -1;
+  color: var(--text-muted);
+  font-size: 9px;
 }
 
 .chart-shell-large .chart {
