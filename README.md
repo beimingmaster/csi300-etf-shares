@@ -48,7 +48,8 @@ npm run build
 
 - `Validate` 在提交和拉取请求时验证数据契约并构建网站。
 - `Refresh ETF data` 每日抓取官方源、验证异常变动、测试、构建并提交生成数据。
-- Cloudflare Pages连接 `main` 分支后，每次数据提交都会触发静态站点重新部署。
+- `Deploy to Cloudflare Pages` 在 `main` 分支每次提交后重新构建并部署纯静态产物。
+- Cloudflare Pages使用免费Direct Upload，不启用Functions、KV、D1、R2或其他存储服务。
 
 ## 许可与声明
 
