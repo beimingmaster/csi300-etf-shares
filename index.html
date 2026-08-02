@@ -5,26 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="一个可核验的ETF公开数据观察站，展示四只主流沪深300ETF最近十年的官方日终份额，并单独观察易方达创业板ETF的半年度持有人趋势。"
+      content="一个可核验的ETF公开数据观察站，展示四只主流沪深300ETF及易方达创业板ETF从2012年至今的日份额与半年度持有人趋势。"
     />
     <meta name="theme-color" content="#eef1f2" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#10171c" media="(prefers-color-scheme: dark)" />
-    <meta property="og:title" content="沪深300ETF十年份额观察" />
+    <meta property="og:title" content="ETF份额观察｜2012年至今" />
     <meta
       property="og:description"
-      content="把四只主流沪深300ETF的官方日终份额与持有人结构放在同一页，并单独展示159915持有人趋势。"
+      content="把四只主流沪深300ETF与159915易方达创业板ETF的长期日份额、持有人结构放在同一页。"
     />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://etf.zluna.ai/" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="canonical" href="https://etf.zluna.ai/" />
-    <title>沪深300ETF十年份额观察</title>
+    <title>ETF份额观察｜2012年至今</title>
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "Dataset",
-        "name": "A股主流沪深300ETF日终份额",
-        "description": "四只主流沪深300ETF最近十年的交易所官方日终份额，以及包含易方达创业板ETF独立观察的中报和年报持有人结构数据。",
+        "name": "A股ETF日终份额与持有人结构",
+        "description": "四只主流沪深300ETF及易方达创业板ETF从2012年至今的日份额，以及中报和年报持有人结构数据。",
         "url": "https://etf.zluna.ai/",
         "license": "https://github.com/beimingmaster/csi300-etf-shares/blob/main/LICENSE",
         "creator": {
@@ -60,10 +60,10 @@
     <main id="main-content">
       <section class="hero" id="top" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <p class="hero-kicker">官方日终份额 / 最近十年</p>
-          <h1 id="hero-title">四只沪深300ETF，十年份额轨迹</h1>
+          <p class="hero-kicker">日终份额 / 2012年至今</p>
+          <h1 id="hero-title">五只ETF，2012年至今的份额轨迹</h1>
           <p class="hero-summary">
-            追踪交易所披露的日终份额，观察长期申赎变化，不把份额变化等同于收益。
+            追踪交易所披露与明确标记的早期历史推算，观察长期申赎变化，不把份额变化等同于收益。
           </p>
           <div class="hero-actions">
             <a class="primary-link" href="#aggregate">查看汇总趋势</a>
@@ -84,11 +84,11 @@
               <dd id="latest-date">-</dd>
             </div>
             <div>
-              <dt>共同交易日</dt>
+              <dt>覆盖交易日</dt>
               <dd id="observation-count">-</dd>
             </div>
             <div>
-              <dt>十年变化</dt>
+              <dt>区间变化</dt>
               <dd id="aggregate-change">-</dd>
             </div>
           </dl>
@@ -103,13 +103,13 @@
 
         <div class="about-content">
           <p class="about-lead">
-            这是一个面向投资者与研究者的公开数据观察站，持续追踪510300、510310、510330和159919四只主流沪深300ETF，并单独观察159915易方达创业板ETF。网站把交易所日终总份额与基金年报、中报披露的持有人结构放在同一页，帮助区分市场申赎变化与“谁在持有”。
+            这是一个面向投资者与研究者的公开数据观察站，持续追踪510300、510310、510330和159919四只主流沪深300ETF，并单独观察159915易方达创业板ETF。网站把2012年至今的日份额与基金年报、中报披露的持有人结构放在同一页，帮助区分市场申赎变化与“谁在持有”。
           </p>
           <div class="about-facts" aria-label="网站数据特点">
             <article>
               <strong>日频</strong>
-              <h3>十年份额轨迹</h3>
-              <p>每日检查沪深交易所数据，只展示四只基金共同具备记录的真实交易日。</p>
+              <h3>2012年至今</h3>
+              <p>每日检查沪深交易所数据；每只基金按自身首个可用记录开始，成立前不补零。</p>
             </article>
             <article>
               <strong>半年</strong>
@@ -137,7 +137,7 @@
         <div class="section-heading">
           <h2 id="aggregate-title">四只ETF份额统计合计</h2>
           <p>
-            逐日相加四只基金的原始份额，仅用于观察总体数量变化。不同基金每份净值不同，该曲线不代表净资产或资金流。
+            从2012年起逐日相加当时已成立且有记录的四只沪深300ETF成员。早期成员数会变化；不同基金每份净值不同，该曲线不代表净资产或资金流。
           </p>
           <p class="interaction-hint">按住或长按图表并左右拖动虚线，可查看最近真实交易日的数据。</p>
         </div>
@@ -152,7 +152,7 @@
             class="chart"
             id="aggregate-chart"
             role="img"
-            aria-label="四只主流沪深300ETF最近十年份额统计合计趋势图"
+            aria-label="四只主流沪深300ETF从2012年至今的份额统计合计趋势图"
           ></div>
         </div>
       </section>
@@ -358,7 +358,7 @@
       <section class="funds-section" id="funds" aria-labelledby="funds-title">
         <div class="section-heading compact-heading">
           <h2 id="funds-title">分别看每一只基金</h2>
-          <p>各图使用独立纵轴，保留真实量级。悬停或触摸曲线可查看交易日和份额。</p>
+          <p>各图统一从2012年开始并使用独立纵轴，基金成立前保持空白。159915只在此独立展示，不进入四只汇总。</p>
           <p class="interaction-hint">按住图表左右拖动，可逐日检查单只ETF的份额。</p>
         </div>
         <div class="fund-grid" id="fund-grid" aria-live="polite"></div>
@@ -368,7 +368,7 @@
         <div class="method-intro">
           <h2 id="method-title">数据口径与更新机制</h2>
           <p>
-            网站每天自动检查官方数据，回刷最近21个自然日，并以沪深300官方交易日历做精确对齐。缺失值不会插值或补零。
+            网站每天自动检查交易所数据，回刷最近21个自然日，并以沪深300官方交易日历做精确对齐。基金成立前不会补零。
           </p>
           <p class="updated-line">
             本页生成时间：<time id="updated-at">-</time>
@@ -380,12 +380,19 @@
             <h3>基金范围</h3>
             <p>
               采用2026-07-31同日份额乘单位净值的估算净资产排名前四，固定为510300、510310、510330和159919。
+              159915易方达创业板ETF仅作独立观察，不参与排名或汇总。
             </p>
           </article>
           <article>
             <h3>原始来源</h3>
             <p>
-              日份额来自上交所与深交所，交易日历来自中证指数；持有人数据来自证监会统一披露平台或基金管理人官网原始中报和年报。
+              2016-08-03以后日份额来自上交所与深交所；上交所更早区间仍为官方披露。交易日历来自中证指数，持有人数据来自证监会统一披露平台或基金管理人官网原始中报和年报。
+            </p>
+          </article>
+          <article>
+            <h3>深市历史边界</h3>
+            <p>
+              深交所接口仅保留滚动十年。159919和159915在2012-01-01至2016-08-02的场内份额使用免费行情成交量与换手率推算，图表与CSV均明确标记，不等同于交易所原始精确值。
             </p>
           </article>
           <article>
@@ -411,7 +418,7 @@
     </main>
 
     <footer>
-      <p>数据研究展示，不构成投资建议。原始份额以交易所最终披露为准。</p>
+      <p>数据研究展示，不构成投资建议。官方区间以交易所最终披露为准，早期推算仅用于长期趋势观察。</p>
       <div class="footer-links">
         <a href="https://github.com/beimingmaster/csi300-etf-shares">GitHub</a>
         <a href="/data/etf-shares.csv" download>CSV 数据</a>

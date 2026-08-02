@@ -149,8 +149,15 @@ function visibleYRange(chart, xRange) {
   for (const trace of chart.data) {
     (trace.x || []).forEach((xValue, index) => {
       const timestamp = new Date(xValue).getTime();
-      const yValue = Number(trace.y?.[index]);
-      if (timestamp >= start && timestamp <= end && Number.isFinite(yValue)) {
+      const rawValue = trace.y?.[index];
+      const yValue = Number(rawValue);
+      if (
+        rawValue !== null
+        && rawValue !== undefined
+        && timestamp >= start
+        && timestamp <= end
+        && Number.isFinite(yValue)
+      ) {
         values.push(yValue);
       }
     });
@@ -229,7 +236,13 @@ function bindPressCursor(chartId) {
     const indexes = new Map();
     (trace.x || []).forEach((xValue, pointNumber) => {
       const timestamp = new Date(xValue).getTime();
-      if (Number.isFinite(timestamp)) {
+      const rawValue = trace.y?.[pointNumber];
+      if (
+        rawValue !== null
+        && rawValue !== undefined
+        && Number.isFinite(Number(rawValue))
+        && Number.isFinite(timestamp)
+      ) {
         indexes.set(timestamp, pointNumber);
         if (!byTimestamp.has(timestamp)) {
           byTimestamp.set(timestamp, xValue);
@@ -557,13 +570,14 @@ async function renderAggregate(data) {
     name: "四只合计",
     x: data.dates,
     y: data.aggregate.values,
+    customdata: data.aggregate.quality_labels,
     meta: { pressUnit: " 亿份" },
     line: { color: theme.accent, width: 2.6 },
     fill: "tozeroy",
     fillcolor: prefersDark.matches
       ? "rgba(217, 103, 44, 0.12)"
       : "rgba(201, 89, 41, 0.11)",
-    hovertemplate: "%{x|%Y-%m-%d}<br><b>%{y:.2f} 亿份</b><extra></extra>",
+    hovertemplate: "%{x|%Y-%m-%d}<br><b>%{y:.2f} 亿份</b><br>%{customdata}<extra></extra>",
   };
 
   await Plotly.react("aggregate-chart", [trace], layout, plotConfig);
@@ -611,6 +625,9 @@ function eventLayers(data, fund, theme) {
   const shapes = [];
   const annotations = [];
   for (const event of events) {
+    if (event.chart_annotation === false) {
+      continue;
+    }
     shapes.push({
       type: "line",
       x0: event.date,
@@ -656,9 +673,10 @@ async function renderFundChart(data, fund) {
     name: fund.code,
     x: data.dates,
     y: data.series[fund.code],
+    customdata: data.quality_series[fund.code],
     meta: { pressUnit: " 亿份" },
     line: { color: fund.color, width: 2.2, dash: fund.line_dash },
-    hovertemplate: "%{x|%Y-%m-%d}<br><b>%{y:.2f} 亿份</b><extra></extra>",
+    hovertemplate: "%{x|%Y-%m-%d}<br><b>%{y:.2f} 亿份</b><br>%{customdata}<extra></extra>",
   };
 
   await Plotly.react(chartId, [trace], layout, plotConfig);
@@ -668,11 +686,18 @@ async function renderFundChart(data, fund) {
 
 function fundCard(fund) {
   const changeClass = fund.change_pct > 0 ? "positive" : fund.change_pct < 0 ? "negative" : "";
+  const panelClass = fund.aggregate_member
+    ? "fund-panel"
+    : "fund-panel fund-panel-standalone";
+  const positionLabel = fund.rank ? `TOP ${fund.rank}` : "创业板 / 独立观察";
+  const qualityNote = fund.estimated_observations > 0
+    ? `<p class="fund-data-note">2016-08-02以前为免费行情成交量与换手率推算，之后为交易所官方披露。</p>`
+    : "";
   return `
-    <article class="fund-panel" aria-labelledby="fund-title-${fund.code}">
+    <article class="${panelClass}" aria-labelledby="fund-title-${fund.code}">
       <header class="fund-header">
         <div>
-          <p class="fund-code">${fund.code} / TOP ${fund.rank}</p>
+          <p class="fund-code">${fund.code} / ${positionLabel}</p>
           <h3 id="fund-title-${fund.code}">${fund.name}</h3>
           <p class="fund-manager">${fund.manager} / ${fund.exchange}</p>
         </div>
@@ -692,12 +717,13 @@ function fundCard(fund) {
           class="chart"
           id="chart-${fund.code}"
           role="img"
-          aria-label="${fund.name}${fund.code}最近十年份额趋势图"
+          aria-label="${fund.name}${fund.code}从2012年至今的份额趋势图"
         ></div>
       </div>
+      ${qualityNote}
       <dl class="fund-stats">
         <div>
-          <dt>十年变化</dt>
+          <dt>区间变化</dt>
           <dd class="${changeClass}">${formatSigned(fund.change_pct, "%")}</dd>
         </div>
         <div>
@@ -978,7 +1004,16 @@ async function loadShareData() {
       throw new Error(`data request failed with ${response.status}`);
     }
     const data = await response.json();
-    if (!Array.isArray(data.dates) || data.dates.length === 0 || data.funds.length !== 4) {
+    if (
+      !Array.isArray(data.dates)
+      || data.dates.length === 0
+      || data.funds.length !== 5
+      || data.metadata.history_start_year !== 2012
+      || data.metadata.aggregate_fund_codes.length !== 4
+      || data.metadata.standalone_fund_codes[0] !== CHINEXT_HOLDER_CODE
+      || !data.series[CHINEXT_HOLDER_CODE]
+      || !data.quality_series[CHINEXT_HOLDER_CODE]
+    ) {
       throw new Error("data contract is incomplete");
     }
     await render(data);

@@ -9,11 +9,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 JSON_PATH = ROOT / "public" / "data" / "etf-shares.json"
 CSV_PATH = ROOT / "public" / "data" / "etf-shares.csv"
+ARCHIVE_CSV_PATH = ROOT / "scripts" / "data" / "etf-shares-archive.csv"
 HOLDER_JSON_PATH = ROOT / "public" / "data" / "holder-structure.json"
 HOLDER_CSV_PATH = ROOT / "public" / "data" / "holder-structure.csv"
-DAILY_SHARE_CODES = {"510300", "510310", "510330", "159919"}
-HOLDER_STANDALONE_CODES = {"159915"}
-HOLDER_ALL_CODES = DAILY_SHARE_CODES | HOLDER_STANDALONE_CODES
+DAILY_AGGREGATE_CODES = {"510300", "510310", "510330", "159919"}
+DAILY_STANDALONE_CODES = {"159915"}
+DAILY_ALL_CODES = DAILY_AGGREGATE_CODES | DAILY_STANDALONE_CODES
+HOLDER_STANDALONE_CODES = DAILY_STANDALONE_CODES
+HOLDER_ALL_CODES = DAILY_ALL_CODES
 
 
 class DataContractTest(unittest.TestCase):
@@ -21,19 +24,28 @@ class DataContractTest(unittest.TestCase):
     def setUpClass(cls):
         cls.data = json.loads(JSON_PATH.read_text(encoding="utf-8"))
 
-    def test_exact_fund_universe_and_complete_common_dates(self):
+    def test_exact_fund_universe_and_complete_post_inception_dates(self):
         dates = self.data["dates"]
         metadata = self.data["metadata"]
         codes = {fund["code"] for fund in self.data["funds"]}
 
-        self.assertEqual(codes, DAILY_SHARE_CODES)
-        self.assertEqual(set(self.data["series"]), DAILY_SHARE_CODES)
+        self.assertEqual(codes, DAILY_ALL_CODES)
+        self.assertEqual(set(self.data["series"]), DAILY_ALL_CODES)
+        self.assertEqual(set(self.data["quality_series"]), DAILY_ALL_CODES)
+        self.assertEqual(set(metadata["aggregate_fund_codes"]), DAILY_AGGREGATE_CODES)
+        self.assertEqual(set(metadata["standalone_fund_codes"]), DAILY_STANDALONE_CODES)
+        self.assertNotIn("159915", metadata["aggregate_fund_codes"])
         self.assertEqual(dates, sorted(set(dates)))
         self.assertEqual(len(dates), metadata["common_observations"])
-        self.assertEqual(metadata["fund_observations"], len(dates) * 4)
+        self.assertEqual(
+            metadata["fund_observations"],
+            sum(value is not None for values in self.data["series"].values() for value in values),
+        )
         self.assertEqual(metadata["coverage_ratio"], 1)
         self.assertEqual(dates[0], metadata["actual_start_date"])
         self.assertEqual(dates[-1], metadata["latest_data_date"])
+        self.assertEqual(metadata["requested_start_date"], "2012-01-01")
+        self.assertEqual(dates[0], "2012-01-04")
 
         requested_span = (
             date.fromisoformat(dates[-1])
@@ -43,12 +55,18 @@ class DataContractTest(unittest.TestCase):
             date.fromisoformat(dates[0])
             - date.fromisoformat(metadata["requested_start_date"])
         )
-        self.assertGreaterEqual(requested_span.days, 3650)
+        self.assertGreaterEqual(requested_span.days, 14 * 365)
         self.assertLessEqual(delayed_start.days, 7)
 
-        for values in self.data["series"].values():
+        fund_by_code = {fund["code"]: fund for fund in self.data["funds"]}
+        for code, values in self.data["series"].items():
             self.assertEqual(len(values), len(dates))
-            self.assertTrue(all(math.isfinite(value) and value > 0 for value in values))
+            self.assertEqual(len(self.data["quality_series"][code]), len(dates))
+            first_index = dates.index(fund_by_code[code]["first_data_date"])
+            self.assertTrue(all(value is None for value in values[:first_index]))
+            self.assertTrue(
+                all(math.isfinite(value) and value > 0 for value in values[first_index:])
+            )
 
     def test_aggregate_is_row_wise_sum(self):
         values = self.data["aggregate"]["values"]
@@ -56,8 +74,18 @@ class DataContractTest(unittest.TestCase):
 
         self.assertEqual(len(values), len(self.data["dates"]))
         for index, aggregate in enumerate(values):
-            expected = sum(series[code][index] for code in DAILY_SHARE_CODES)
-            self.assertAlmostEqual(aggregate, expected, places=6)
+            members = [
+                series[code][index]
+                for code in DAILY_AGGREGATE_CODES
+                if series[code][index] is not None
+            ]
+            self.assertEqual(self.data["aggregate"]["member_counts"][index], len(members))
+            if members:
+                self.assertAlmostEqual(aggregate, sum(members), places=6)
+            else:
+                self.assertIsNone(aggregate)
+        self.assertEqual(self.data["aggregate"]["first_data_date"], "2012-05-28")
+        self.assertEqual(self.data["aggregate"]["member_counts"][-1], 4)
 
     def test_reviewed_share_consolidation_is_recorded(self):
         event = next(
@@ -70,13 +98,35 @@ class DataContractTest(unittest.TestCase):
         self.assertLess(event["change_pct"], -20)
         self.assertTrue(event["source_url"].startswith("https://"))
 
-    def test_csv_contains_only_selected_funds(self):
+    def test_csv_contains_all_daily_funds_and_quality_provenance(self):
         with CSV_PATH.open(encoding="utf-8", newline="") as handle:
             rows = list(csv.DictReader(handle))
 
-        self.assertGreaterEqual(len(rows), self.data["metadata"]["fund_observations"])
-        self.assertEqual({row["code"] for row in rows}, DAILY_SHARE_CODES)
+        self.assertEqual(len(rows), self.data["metadata"]["fund_observations"])
+        self.assertEqual({row["code"] for row in rows}, DAILY_ALL_CODES)
         self.assertTrue(all(float(row["shares_100m"]) > 0 for row in rows))
+        self.assertEqual({row["quality"] for row in rows}, {"official", "estimated"})
+        self.assertEqual(
+            {row["method"] for row in rows},
+            {"exchange_disclosure", "volume_turnover_inference"},
+        )
+
+    def test_chinext_daily_series_is_standalone_from_2012(self):
+        fund = next(fund for fund in self.data["funds"] if fund["code"] == "159915")
+        values = self.data["series"]["159915"]
+        qualities = self.data["quality_series"]["159915"]
+
+        self.assertFalse(fund["aggregate_member"])
+        self.assertIsNone(fund["rank"])
+        self.assertEqual(fund["first_data_date"], "2012-01-04")
+        self.assertEqual(qualities[self.data["dates"].index("2016-08-02")], "免费行情推算")
+        self.assertEqual(qualities[self.data["dates"].index("2016-08-03")], "交易所官方披露")
+        self.assertGreater(values[-1], 0)
+
+        with ARCHIVE_CSV_PATH.open(encoding="utf-8", newline="") as handle:
+            archive_rows = list(csv.DictReader(handle))
+        self.assertEqual({row["code"] for row in archive_rows}, DAILY_ALL_CODES)
+        self.assertTrue(any(row["code"] == "159915" for row in archive_rows))
 
 
 class HolderDataContractTest(unittest.TestCase):
@@ -97,7 +147,7 @@ class HolderDataContractTest(unittest.TestCase):
         self.assertFalse(metadata["q1_2026_holder_data_available"])
         self.assertEqual(metadata["report_count"], len(periods) * 5)
         self.assertEqual({fund["code"] for fund in self.data["funds"]}, HOLDER_ALL_CODES)
-        self.assertEqual(set(metadata["aggregate_fund_codes"]), DAILY_SHARE_CODES)
+        self.assertEqual(set(metadata["aggregate_fund_codes"]), DAILY_AGGREGATE_CODES)
         self.assertEqual(set(metadata["standalone_fund_codes"]), HOLDER_STANDALONE_CODES)
         self.assertNotIn("159915", metadata["aggregate_fund_codes"])
 
@@ -120,7 +170,7 @@ class HolderDataContractTest(unittest.TestCase):
             for index in range(len(periods)):
                 expected_shares = sum(
                     self.data["series"][code]["categories"][category]["shares_100m"][index]
-                    for code in DAILY_SHARE_CODES
+                    for code in DAILY_AGGREGATE_CODES
                 )
                 self.assertAlmostEqual(
                     aggregate_series["shares_100m"][index],

@@ -951,6 +951,14 @@ h1 {
   background: color-mix(in srgb, var(--surface) 94%, transparent);
 }
 
+.fund-panel-standalone {
+  grid-column: 1 / -1;
+  border-color: color-mix(in srgb, #9a6a24 42%, var(--line));
+  background:
+    linear-gradient(135deg, color-mix(in srgb, #9a6a24 8%, transparent), transparent 42%),
+    color-mix(in srgb, var(--surface) 94%, transparent);
+}
+
 .fund-header {
   min-height: 122px;
   display: flex;
@@ -975,6 +983,16 @@ h1 {
   margin: 9px 0 0;
   color: var(--text-muted);
   font-size: 12px;
+}
+
+.fund-data-note {
+  margin: 4px 0 18px;
+  padding: 10px 12px;
+  border-left: 2px solid #9a6a24;
+  color: var(--text-muted);
+  background: color-mix(in srgb, #9a6a24 7%, transparent);
+  font-size: 12px;
+  line-height: 1.65;
 }
 
 .fund-latest {

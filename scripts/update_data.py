@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Refresh 10 years of official daily share data for four major CSI 300 ETFs."""
+"""Refresh daily share data for the tracked ETFs from 2012 onward."""
 
 from __future__ import annotations
 
@@ -26,17 +26,19 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT / "public" / "data"
 CSV_PATH = DATA_DIR / "etf-shares.csv"
 JSON_PATH = DATA_DIR / "etf-shares.json"
+ARCHIVE_CSV_PATH = ROOT / "scripts" / "data" / "etf-shares-archive.csv"
 
 SSE_URL = "https://query.sse.com.cn/commonQuery.do"
 SZSE_URL = "https://www.szse.cn/api/report/ShowReport/data"
 CSI_INDEX_URL = "https://www.csindex.com.cn/csindex-home/perf/index-perf"
+XUEQIU_KLINE_URL = "https://stock.xueqiu.com/v5/stock/chart/kline.json"
 SSE_SQL_ID = "COMMON_SSE_ZQPZ_ETFZL_XXPL_ETFGM_SEARCH_L"
 CSI300_CODE = "000300"
 CSI300_NAME = "沪深300指数"
 TIMEZONE = ZoneInfo("Asia/Shanghai")
 THREAD_LOCAL = threading.local()
 
-LOOKBACK_YEARS = 10
+HISTORY_START_DATE = date(2012, 1, 1)
 REFRESH_DAYS = 21
 SSE_WORKERS = 4
 SSE_CHECKPOINT_SIZE = 40
@@ -49,12 +51,14 @@ class Fund:
     name: str
     manager: str
     exchange: str
-    rank: int
+    rank: int | None
     color: str
     line_dash: str
+    aggregate_member: bool
+    daily_start_date: str
 
 
-FUNDS = (
+AGGREGATE_FUNDS = (
     Fund(
         code="510300",
         name="沪深300ETF华泰柏瑞",
@@ -63,6 +67,8 @@ FUNDS = (
         rank=1,
         color="#234a6f",
         line_dash="solid",
+        aggregate_member=True,
+        daily_start_date="2012-05-28",
     ),
     Fund(
         code="510310",
@@ -72,6 +78,8 @@ FUNDS = (
         rank=2,
         color="#c85f2c",
         line_dash="dash",
+        aggregate_member=True,
+        daily_start_date="2013-03-25",
     ),
     Fund(
         code="510330",
@@ -81,6 +89,8 @@ FUNDS = (
         rank=3,
         color="#287d72",
         line_dash="dashdot",
+        aggregate_member=True,
+        daily_start_date="2013-01-16",
     ),
     Fund(
         code="159919",
@@ -90,9 +100,27 @@ FUNDS = (
         rank=4,
         color="#a74747",
         line_dash="dot",
+        aggregate_member=True,
+        daily_start_date="2012-05-28",
     ),
 )
+STANDALONE_FUNDS = (
+    Fund(
+        code="159915",
+        name="易方达创业板ETF",
+        manager="易方达基金管理有限公司",
+        exchange="深交所",
+        rank=None,
+        color="#9a6a24",
+        line_dash="solid",
+        aggregate_member=False,
+        daily_start_date="2012-01-04",
+    ),
+)
+FUNDS = AGGREGATE_FUNDS + STANDALONE_FUNDS
 FUND_BY_CODE = {fund.code: fund for fund in FUNDS}
+AGGREGATE_CODES = {fund.code for fund in AGGREGATE_FUNDS}
+STANDALONE_CODES = {fund.code for fund in STANDALONE_FUNDS}
 SSE_CODES = {fund.code for fund in FUNDS if fund.exchange == "上交所"}
 SZSE_CODES = {fund.code for fund in FUNDS if fund.exchange == "深交所"}
 KNOWN_UNAVAILABLE_SHARE_DATES = {
@@ -117,6 +145,39 @@ KNOWN_LARGE_MOVES = {
         ),
     }
 }
+EXCHANGE_VERIFIED_LARGE_MOVE_DATES = {
+    ("510300", date(2015, 1, 5)),
+    ("510300", date(2015, 5, 7)),
+    ("510300", date(2015, 5, 11)),
+    ("510300", date(2015, 5, 20)),
+    ("510300", date(2015, 6, 8)),
+    ("510300", date(2015, 6, 9)),
+    ("510300", date(2015, 6, 29)),
+    ("510300", date(2015, 6, 30)),
+    ("510300", date(2015, 7, 3)),
+    ("510300", date(2015, 7, 6)),
+    ("510310", date(2013, 5, 15)),
+    ("510310", date(2013, 9, 27)),
+    ("510310", date(2013, 9, 30)),
+    ("510310", date(2013, 10, 8)),
+    ("510310", date(2013, 10, 14)),
+    ("510310", date(2013, 10, 15)),
+    ("510310", date(2013, 10, 16)),
+    ("510310", date(2015, 7, 9)),
+    ("159915", date(2020, 12, 24)),
+    ("159915", date(2020, 12, 25)),
+    ("159915", date(2024, 10, 8)),
+}
+for verified_code, verified_date in EXCHANGE_VERIFIED_LARGE_MOVE_DATES:
+    source_url = SSE_URL if verified_code in SSE_CODES else SZSE_URL
+    KNOWN_LARGE_MOVES[(verified_code, verified_date)] = {
+        "type": "large_subscription_redemption",
+        "label": "大额申赎",
+        "review_status": "verified",
+        "source_name": "证券交易所ETF规模披露",
+        "source_url": source_url,
+        "chart_annotation": False,
+    }
 
 
 def parse_args() -> argparse.Namespace:
@@ -139,13 +200,6 @@ def parse_args() -> argparse.Namespace:
 
 def parse_date(value: str) -> date:
     return datetime.strptime(value, "%Y-%m-%d").date()
-
-
-def shift_years(value: date, years: int) -> date:
-    try:
-        return value.replace(year=value.year + years)
-    except ValueError:
-        return value.replace(year=value.year + years, day=28)
 
 
 def make_session() -> requests.Session:
@@ -263,6 +317,8 @@ def fetch_sse_day(day: date) -> list[dict[str, Any]]:
             "shares_100m": shares,
             "exchange": "上交所",
             "source": SSE_URL,
+            "quality": "official",
+            "method": "exchange_disclosure",
         }
         for code, shares in values.items()
     ]
@@ -344,6 +400,8 @@ def fetch_szse_range(code: str, start: date, end: date) -> list[dict[str, Any]]:
                         "shares_100m": shares,
                         "exchange": "深交所",
                         "source": SZSE_URL,
+                        "quality": "official",
+                        "method": "exchange_disclosure",
                     }
                 )
             page_count = int(report.get("metadata", {}).get("pagecount") or 0)
@@ -380,6 +438,8 @@ def load_rows(path: Path) -> dict[tuple[date, str], dict[str, Any]]:
                     item.get("source")
                     or (SSE_URL if fund.exchange == "上交所" else SZSE_URL)
                 ),
+                "quality": str(item.get("quality") or "official"),
+                "method": str(item.get("method") or "exchange_disclosure"),
             }
     return rows
 
@@ -388,8 +448,10 @@ def validate_rows(
     rows: dict[tuple[date, str], dict[str, Any]],
     trading_dates: list[date],
 ) -> None:
-    expected_dates = set(trading_dates)
     for fund in FUNDS:
+        expected_dates = {
+            day for day in trading_dates if day >= parse_date(fund.daily_start_date)
+        }
         series = sorted(
             (
                 row
@@ -419,37 +481,16 @@ def validate_rows(
                     raise ValueError(
                         f"implausible share ratio for {fund.code} on {row['date']}: {ratio}"
                     )
-                if abs(ratio - 1) > 0.2 and (fund.code, row["date"]) not in KNOWN_LARGE_MOVES:
+                if (
+                    abs(ratio - 1) > 0.2
+                    and row["quality"] == "official"
+                    and (fund.code, row["date"]) not in KNOWN_LARGE_MOVES
+                ):
                     raise ValueError(
                         f"unreviewed >20% share move for {fund.code} on {row['date']}: "
                         f"{(ratio - 1) * 100:.2f}%"
                     )
             previous = shares
-
-
-def align_trading_dates(
-    rows: dict[tuple[date, str], dict[str, Any]],
-    trading_dates: list[date],
-    requested_start: date,
-) -> list[date]:
-    requested_set = set(trading_dates)
-    first_dates: list[date] = []
-    for fund in FUNDS:
-        available = sorted(
-            row_date
-            for row_date, code in rows
-            if code == fund.code and row_date in requested_set
-        )
-        if not available:
-            raise ValueError(f"no share history for {fund.code}")
-        first_dates.append(available[0])
-    actual_start = max(first_dates)
-    if actual_start > requested_start + timedelta(days=14):
-        raise ValueError(
-            f"common share history starts too late at {actual_start}; "
-            f"requested {requested_start}"
-        )
-    return [day for day in trading_dates if day >= actual_start]
 
 
 def atomic_write_text(path: Path, content: str) -> None:
@@ -460,7 +501,15 @@ def atomic_write_text(path: Path, content: str) -> None:
 
 
 def write_csv(rows: dict[tuple[date, str], dict[str, Any]]) -> None:
-    fieldnames = ["date", "code", "shares_100m", "exchange", "source"]
+    fieldnames = [
+        "date",
+        "code",
+        "shares_100m",
+        "exchange",
+        "source",
+        "quality",
+        "method",
+    ]
     CSV_PATH.parent.mkdir(parents=True, exist_ok=True)
     temporary = CSV_PATH.with_suffix(".csv.tmp")
     with temporary.open("w", newline="", encoding="utf-8") as handle:
@@ -475,6 +524,8 @@ def write_csv(rows: dict[tuple[date, str], dict[str, Any]]) -> None:
                     "shares_100m": f"{float(item['shares_100m']):.6f}",
                     "exchange": item["exchange"],
                     "source": item["source"],
+                    "quality": item["quality"],
+                    "method": item["method"],
                 }
             )
     os.replace(temporary, CSV_PATH)
@@ -487,20 +538,51 @@ def build_payload(
     updated_at: datetime,
 ) -> dict[str, Any]:
     date_keys = [day.isoformat() for day in trading_dates]
-    series: dict[str, list[float]] = {}
+    series: dict[str, list[float | None]] = {}
+    quality_series: dict[str, list[str | None]] = {}
     fund_payload: list[dict[str, Any]] = []
+    fund_observations = 0
+    expected_observations = 0
     for fund in FUNDS:
-        values = [float(rows[(day, fund.code)]["shares_100m"]) for day in trading_dates]
+        values = [
+            (
+                float(rows[(day, fund.code)]["shares_100m"])
+                if (day, fund.code) in rows
+                else None
+            )
+            for day in trading_dates
+        ]
         series[fund.code] = values
-        minimum = min(values)
-        maximum = max(values)
-        minimum_index = values.index(minimum)
-        maximum_index = values.index(maximum)
-        first = values[0]
-        latest = values[-1]
+        quality_series[fund.code] = [
+            (
+                "交易所官方披露"
+                if rows[(day, fund.code)]["quality"] == "official"
+                else "免费行情推算"
+            )
+            if (day, fund.code) in rows
+            else None
+            for day in trading_dates
+        ]
+        available = [(index, value) for index, value in enumerate(values) if value is not None]
+        if not available:
+            raise ValueError(f"no share history for {fund.code}")
+        fund_observations += len(available)
+        expected_observations += sum(
+            day >= parse_date(fund.daily_start_date) for day in trading_dates
+        )
+        minimum_index, minimum = min(available, key=lambda item: item[1])
+        maximum_index, maximum = max(available, key=lambda item: item[1])
+        first_index, first = available[0]
+        latest_index, latest = available[-1]
+        qualities = [
+            rows[(trading_dates[index], fund.code)]["quality"] for index, _ in available
+        ]
+        estimated_observations = qualities.count("estimated")
         fund_payload.append(
             {
                 **asdict(fund),
+                "first_data_date": date_keys[first_index],
+                "latest_data_date": date_keys[latest_index],
                 "first_shares_100m": round(first, 6),
                 "latest_shares_100m": round(latest, 6),
                 "change_100m": round(latest - first, 6),
@@ -509,15 +591,43 @@ def build_payload(
                 "minimum_date": date_keys[minimum_index],
                 "maximum_shares_100m": round(maximum, 6),
                 "maximum_date": date_keys[maximum_index],
+                "official_observations": len(available) - estimated_observations,
+                "estimated_observations": estimated_observations,
+                "data_quality": "mixed" if estimated_observations else "official",
             }
         )
 
-    aggregate_values = [
-        round(sum(series[fund.code][index] for fund in FUNDS), 6)
-        for index in range(len(trading_dates))
+    aggregate_values: list[float | None] = []
+    aggregate_member_counts: list[int] = []
+    aggregate_quality_labels: list[str | None] = []
+    for index in range(len(trading_dates)):
+        available = [
+            series[fund.code][index]
+            for fund in AGGREGATE_FUNDS
+            if series[fund.code][index] is not None
+        ]
+        aggregate_member_counts.append(len(available))
+        aggregate_values.append(round(sum(available), 6) if available else None)
+        qualities = [
+            quality_series[fund.code][index]
+            for fund in AGGREGATE_FUNDS
+            if series[fund.code][index] is not None
+        ]
+        aggregate_quality_labels.append(
+            (
+                f"当日纳入{len(available)}只 / "
+                + ("含历史推算" if "免费行情推算" in qualities else "均为交易所官方")
+            )
+            if available
+            else None
+        )
+    aggregate_available = [
+        (index, value)
+        for index, value in enumerate(aggregate_values)
+        if value is not None
     ]
-    aggregate_first = aggregate_values[0]
-    aggregate_latest = aggregate_values[-1]
+    aggregate_first_index, aggregate_first = aggregate_available[0]
+    aggregate_latest_index, aggregate_latest = aggregate_available[-1]
     actual_start = trading_dates[0]
     latest_date = trading_dates[-1]
     reviewed_events = []
@@ -529,6 +639,8 @@ def build_payload(
             continue
         previous = series[code][event_index - 1]
         current = series[code][event_index]
+        if previous is None or current is None:
+            continue
         reviewed_events.append(
             {
                 "code": code,
@@ -542,23 +654,27 @@ def build_payload(
 
     return {
         "metadata": {
-            "title": "A股主流沪深300ETF份额趋势",
-            "window_years": LOOKBACK_YEARS,
-            "lookback_years": LOOKBACK_YEARS,
+            "title": "ETF份额趋势（2012年至今）",
+            "history_start_year": HISTORY_START_DATE.year,
             "requested_start_date": requested_start.isoformat(),
             "actual_start_date": actual_start.isoformat(),
             "latest_data_date": latest_date.isoformat(),
             "updated_at": updated_at.isoformat(),
             "timezone": "Asia/Shanghai",
             "common_observations": len(trading_dates),
-            "fund_observations": len(trading_dates) * len(FUNDS),
-            "coverage_ratio": 1.0,
+            "fund_observations": fund_observations,
+            "coverage_ratio": round(fund_observations / expected_observations, 8),
             "large_move_review_count": len(reviewed_events),
             "selection_as_of": "2026-07-31",
             "selection_basis": "普通被动沪深300ETF同日份额乘单位净值的估算净资产排名前四",
             "selection_policy": "固定当前四只主流产品，不构造历史逐日TOP4",
-            "aggregate_method": "四只ETF原始份额的算术合计",
-            "aggregate_warning": "不同ETF每份净值不同，份额合计仅用于统计展示，不代表净资产或资金流",
+            "aggregate_fund_codes": [fund.code for fund in AGGREGATE_FUNDS],
+            "standalone_fund_codes": [fund.code for fund in STANDALONE_FUNDS],
+            "aggregate_method": "逐日合计当时已成立且有记录的四只沪深300ETF成员",
+            "aggregate_warning": "早期汇总成员数随基金成立而增加；不同ETF每份净值不同，份额合计不代表净资产或资金流",
+            "historical_estimate_codes": ["159919", "159915"],
+            "historical_estimate_end_date": "2016-08-02",
+            "quality_warning": "深交所公开接口仅保留滚动十年；两只深市ETF在2012-01-01至2016-08-02的场内份额由免费行情成交量和换手率推算，仅用于长期趋势观察",
             "share_unit": "亿份",
             "sources": [
                 {
@@ -576,14 +692,24 @@ def build_payload(
                     "url": CSI_INDEX_URL,
                     "role": "沪深300官方交易日历",
                 },
+                {
+                    "name": "雪球免费历史行情",
+                    "url": XUEQIU_KLINE_URL,
+                    "role": "深交所十年窗口以前的成交量和换手率推算输入",
+                },
             ],
         },
         "dates": date_keys,
         "funds": fund_payload,
         "series": series,
+        "quality_series": quality_series,
         "reviewed_events": reviewed_events,
         "aggregate": {
             "values": aggregate_values,
+            "member_counts": aggregate_member_counts,
+            "quality_labels": aggregate_quality_labels,
+            "first_data_date": date_keys[aggregate_first_index],
+            "latest_data_date": date_keys[aggregate_latest_index],
             "first_shares_100m": round(aggregate_first, 6),
             "latest_shares_100m": round(aggregate_latest, 6),
             "change_100m": round(aggregate_latest - aggregate_first, 6),
@@ -600,23 +726,18 @@ def main() -> None:
     if args.refresh_days < 0:
         raise ValueError("refresh-days must not be negative")
     end = parse_date(args.end) if args.end else datetime.now(TIMEZONE).date()
-    calendar_start = (
-        parse_date(args.start)
-        if args.start
-        else shift_years(end, -LOOKBACK_YEARS) - timedelta(days=21)
-    )
+    calendar_start = parse_date(args.start) if args.start else HISTORY_START_DATE
     calendar = fetch_trading_calendar(calendar_start, end)
     latest_date = calendar[-1]
-    requested_start = (
-        parse_date(args.start)
-        if args.start
-        else shift_years(latest_date, -LOOKBACK_YEARS)
-    )
+    requested_start = parse_date(args.start) if args.start else HISTORY_START_DATE
     trading_dates = [day for day in calendar if day >= requested_start]
     if not trading_dates:
         raise RuntimeError("no CSI 300 trading dates in requested window")
 
     rows = load_rows(CSV_PATH)
+    archive_rows = load_rows(ARCHIVE_CSV_PATH)
+    for key, item in archive_rows.items():
+        rows.setdefault(key, item)
     if not rows and args.seed_csv:
         rows.update(load_rows(args.seed_csv))
         print(f"loaded seed cache from {args.seed_csv}", flush=True)
@@ -626,7 +747,11 @@ def main() -> None:
         day
         for day in trading_dates
         if day >= refresh_cutoff
-        or any((day, code) not in rows for code in SSE_CODES)
+        or any(
+            day >= parse_date(FUND_BY_CODE[code].daily_start_date)
+            and (day, code) not in rows
+            for code in SSE_CODES
+        )
     ]
     szse_dates = [
         day
@@ -634,6 +759,7 @@ def main() -> None:
         if day >= refresh_cutoff
         or any(
             (day, code) not in rows
+            and day >= parse_date(FUND_BY_CODE[code].daily_start_date)
             and (code, day) not in KNOWN_UNAVAILABLE_SHARE_DATES
             for code in SZSE_CODES
         )
@@ -650,7 +776,6 @@ def main() -> None:
                     rows[(item["date"], item["code"])] = item
         write_csv(rows)
 
-    trading_dates = align_trading_dates(rows, trading_dates, requested_start)
     validate_rows(rows, trading_dates)
     updated_at = datetime.now(TIMEZONE).replace(microsecond=0)
     payload = build_payload(

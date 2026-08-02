@@ -34,6 +34,9 @@ test("the page exposes all required static data views", async () => {
   assert.match(html, /href="\/data\/etf-shares\.csv"/);
   assert.match(html, /href="\/data\/holder-structure\.csv"/);
   assert.match(script, /data\.funds\.map\(fundCard\)/);
+  assert.match(script, /fund-panel-standalone/);
+  assert.match(script, /data\.funds\.length !== 5/);
+  assert.match(script, /data\.quality_series\[fund\.code\]/);
   assert.match(script, /renderAggregate\(data\)/);
   assert.match(script, /renderHolderAggregate/);
   assert.match(script, /renderHolderStandalone/);
@@ -41,6 +44,8 @@ test("the page exposes all required static data views", async () => {
   assert.match(script, /bindPressCursor/);
   assert.match(script, /chart-press-readout/);
   assert.match(script, /"yaxis\.autorange": true/);
+  assert.match(html, /2012年至今/);
+  assert.match(html, /159915只在此独立展示/);
 });
 
 test("holder controls expose all requested categories and metrics", async () => {
