@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="基于上交所和深交所官方日终份额数据，展示四只主流沪深300ETF最近十年份额趋势。"
+    />
+    <meta name="theme-color" content="#eef1f2" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#10171c" media="(prefers-color-scheme: dark)" />
+    <meta property="og:title" content="沪深300ETF十年份额观察" />
+    <meta
+      property="og:description"
+      content="追踪510300、510310、510330、159919的官方日终份额与长期变化。"
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://etf.zluna.ai/" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="canonical" href="https://etf.zluna.ai/" />
+    <title>沪深300ETF十年份额观察</title>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Dataset",
+        "name": "A股主流沪深300ETF日终份额",
+        "description": "四只主流沪深300ETF最近十年的交易所官方日终份额数据。",
+        "url": "https://etf.zluna.ai/",
+        "license": "https://github.com/chat2dev/csi300-etf-shares/blob/main/LICENSE",
+        "creator": {
+          "@type": "Organization",
+          "name": "zluna.ai"
+        },
+        "distribution": {
+          "@type": "DataDownload",
+          "encodingFormat": "text/csv",
+          "contentUrl": "https://etf.zluna.ai/data/etf-shares.csv"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">跳到主要内容</a>
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="#top" aria-label="返回顶部">
+          <span class="brand-mark" aria-hidden="true">300</span>
+          <span>ETF 份额观察</span>
+        </a>
+        <nav aria-label="主导航">
+          <a href="#aggregate">汇总</a>
+          <a href="#funds">单品</a>
+          <a href="#methodology">方法</a>
+        </nav>
+        <p class="header-date" id="header-date">正在读取数据</p>
+      </div>
+    </header>
+
+    <main id="main-content">
+      <section class="hero" id="top" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="hero-kicker">官方日终份额 / 最近十年</p>
+          <h1 id="hero-title">四只沪深300ETF，十年份额轨迹</h1>
+          <p class="hero-summary">
+            追踪交易所披露的日终份额，观察长期申赎变化，不把份额变化等同于收益。
+          </p>
+          <div class="hero-actions">
+            <a class="primary-link" href="#aggregate">查看汇总趋势</a>
+            <a class="text-link" href="/data/etf-shares.csv" download>下载 CSV</a>
+          </div>
+        </div>
+
+        <aside class="hero-panel" aria-label="最新数据概览">
+          <div class="hero-panel-topline">
+            <span>四只份额统计合计</span>
+            <span id="freshness-label">载入中</span>
+          </div>
+          <p class="hero-value skeleton-text" id="aggregate-latest">000.00</p>
+          <p class="hero-unit">亿份</p>
+          <dl class="hero-metrics">
+            <div>
+              <dt>数据截止</dt>
+              <dd id="latest-date">-</dd>
+            </div>
+            <div>
+              <dt>共同交易日</dt>
+              <dd id="observation-count">-</dd>
+            </div>
+            <div>
+              <dt>十年变化</dt>
+              <dd id="aggregate-change">-</dd>
+            </div>
+          </dl>
+        </aside>
+      </section>
+
+      <div class="data-error" id="data-error" role="alert" hidden>
+        <strong>数据暂时无法载入。</strong>
+        <span>请稍后重试，或直接下载仓库中的 CSV 数据。</span>
+      </div>
+
+      <section class="aggregate-section" id="aggregate" aria-labelledby="aggregate-title">
+        <div class="section-heading">
+          <h2 id="aggregate-title">四只ETF份额统计合计</h2>
+          <p>
+            逐日相加四只基金的原始份额，仅用于观察总体数量变化。不同基金每份净值不同，该曲线不代表净资产或资金流。
+          </p>
+        </div>
+        <div class="chart-shell chart-shell-large">
+          <div class="chart-loading" aria-hidden="true"></div>
+          <div
+            class="chart"
+            id="aggregate-chart"
+            role="img"
+            aria-label="四只主流沪深300ETF最近十年份额统计合计趋势图"
+          ></div>
+        </div>
+      </section>
+
+      <section class="funds-section" id="funds" aria-labelledby="funds-title">
+        <div class="section-heading compact-heading">
+          <h2 id="funds-title">分别看每一只基金</h2>
+          <p>各图使用独立纵轴，保留真实量级。悬停或触摸曲线可查看交易日和份额。</p>
+        </div>
+        <div class="fund-grid" id="fund-grid" aria-live="polite"></div>
+      </section>
+
+      <section class="methodology" id="methodology" aria-labelledby="method-title">
+        <div class="method-intro">
+          <h2 id="method-title">数据口径与更新机制</h2>
+          <p>
+            网站每天自动检查官方数据，回刷最近21个自然日，并以沪深300官方交易日历做精确对齐。缺失值不会插值或补零。
+          </p>
+          <p class="updated-line">
+            本页生成时间：<time id="updated-at">-</time>
+          </p>
+        </div>
+
+        <div class="method-details">
+          <article>
+            <h3>基金范围</h3>
+            <p>
+              采用2026-07-31同日份额乘单位净值的估算净资产排名前四，固定为510300、510310、510330和159919。
+            </p>
+          </article>
+          <article>
+            <h3>原始来源</h3>
+            <p>
+              份额来自上海证券交易所与深圳证券交易所公开接口，交易日历来自中证指数官网。
+            </p>
+          </article>
+          <article>
+            <h3>解释边界</h3>
+            <p>
+              份额增加通常对应净申购，减少通常对应净赎回，但不等于收益、净资产变化或任何投资者类别的持仓变化。
+            </p>
+          </article>
+          <article>
+            <h3>已审核公司行动</h3>
+            <p>
+              510310于2024-09-20实施基金份额合并，图中断点不是普通净赎回。事件已依据基金管理人公告核验。
+            </p>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <p>数据研究展示，不构成投资建议。原始份额以交易所最终披露为准。</p>
+      <div class="footer-links">
+        <a href="https://github.com/chat2dev/csi300-etf-shares">GitHub</a>
+        <a href="/data/etf-shares.csv" download>CSV 数据</a>
+      </div>
+    </footer>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

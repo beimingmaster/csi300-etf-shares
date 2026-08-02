@@ -1,0 +1,20 @@
+{
+  "name": "csi300-etf-shares",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node --test tests/*.test.js && python3 -m unittest discover -s tests -p 'test_*.py'"
+  },
+  "dependencies": {
+    "@fontsource-variable/ibm-plex-sans": "5.3.0",
+    "@fontsource/ibm-plex-mono": "5.3.0",
+    "plotly.js-basic-dist-min": "3.7.0"
+  },
+  "devDependencies": {
+    "vite": "8.2.0"
+  }
+}
