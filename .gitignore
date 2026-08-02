@@ -4,3 +4,4 @@ dist/
 *.log
 __pycache__/
 *.pyc
+etf/holder_reports/

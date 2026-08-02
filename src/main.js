@@ -480,10 +480,19 @@ function chartDateBounds(chart) {
 
 async function resetChart(chart) {
   chart.pressCursorHide?.();
-  await Plotly.relayout(chart, {
-    "xaxis.autorange": true,
-    "yaxis.autorange": true,
-  });
+  const bounds = chartDateBounds(chart);
+  if (!bounds) {
+    await Plotly.relayout(chart, {
+      "xaxis.autorange": true,
+      "yaxis.autorange": true,
+    });
+    return;
+  }
+  const xRange = bounds.map((value) => new Date(value).toISOString());
+  const yRange = visibleYRange(chart, xRange);
+  await Plotly.relayout(chart, yRange
+    ? { "xaxis.range": xRange, "yaxis.range": yRange }
+    : { "xaxis.range": xRange, "yaxis.autorange": true });
 }
 
 
@@ -746,7 +755,7 @@ function selectedHolderCategories() {
 }
 
 
-function holderTrace(data, values, categoryKey, metric) {
+function holderTrace(data, categorySeries, categoryKey, metric) {
   const category = data.categories[categoryKey];
   const theme = getTheme();
   const suffix = metric === "ratio_pct" ? "%" : " 亿份";
@@ -761,7 +770,7 @@ function holderTrace(data, values, categoryKey, metric) {
     name: category.label,
     legendgroup: categoryKey,
     x: data.periods,
-    y: values,
+    y: categorySeries[metric],
     line: {
       color: theme.holderColors[categoryKey],
       width: categoryKey === "national_team" ? 2.8 : 2.2,
@@ -773,7 +782,9 @@ function holderTrace(data, values, categoryKey, metric) {
       symbol: markerSymbols[categoryKey],
       line: { color: theme.paper, width: 1 },
     },
-    customdata: data.periods.map(() => category.precision_label),
+    customdata: data.periods.map((_, index) => (
+      categorySeries.precision_labels?.[index] || category.precision_label
+    )),
     meta: { pressUnit: metric === "ratio_pct" ? "%" : " 亿份" },
     hovertemplate: [
       "%{x|%Y-%m-%d}",
@@ -785,7 +796,7 @@ function holderTrace(data, values, categoryKey, metric) {
 }
 
 
-function holderLayout(metric, showLegend, revisionKey) {
+function holderLayout(metric, showLegend, revisionKey, periods) {
   const theme = getTheme();
   const mobile = window.innerWidth < 768;
   const layout = commonLayout(theme, mobile ? 370 : 420);
@@ -797,6 +808,7 @@ function holderLayout(metric, showLegend, revisionKey) {
   layout.dragmode = false;
   layout.showlegend = showLegend;
   layout.uirevision = revisionKey;
+  layout.xaxis.range = [periods[0], periods[periods.length - 1]];
   layout.xaxis.tickformat = "%Y-%m";
   layout.xaxis.tickangle = mobile ? -35 : 0;
   layout.yaxis.title.text = metric === "ratio_pct" ? "占总份额（%）" : "亿份";
@@ -850,7 +862,7 @@ async function renderHolderAggregate(data, metric, chartId) {
   const categories = selectedHolderCategories();
   const traces = categories.map((categoryKey) => holderTrace(
     data,
-    data.aggregate.categories[categoryKey][metric],
+    data.aggregate.categories[categoryKey],
     categoryKey,
     metric,
   ));
@@ -858,6 +870,7 @@ async function renderHolderAggregate(data, metric, chartId) {
     metric,
     true,
     `${chartId}-${metric}-${categories.join("-")}-${prefersDark.matches}`,
+    data.periods,
   );
   await Plotly.react(chartId, traces, layout, plotConfig);
   finishChart(chartId);
@@ -868,7 +881,7 @@ async function renderHolderStandalone(data, fund, metric, chartId) {
   const categories = selectedHolderCategories();
   const traces = categories.map((categoryKey) => holderTrace(
     data,
-    data.series[fund.code].categories[categoryKey][metric],
+    data.series[fund.code].categories[categoryKey],
     categoryKey,
     metric,
   ));
@@ -876,6 +889,7 @@ async function renderHolderStandalone(data, fund, metric, chartId) {
     metric,
     true,
     `${chartId}-${metric}-${categories.join("-")}-${prefersDark.matches}`,
+    data.periods,
   );
   await Plotly.react(chartId, traces, layout, plotConfig);
   finishChart(chartId);
@@ -886,7 +900,7 @@ async function renderHolderFund(data, fund) {
   const categories = selectedHolderCategories();
   const traces = categories.map((categoryKey) => holderTrace(
     data,
-    data.series[fund.code].categories[categoryKey][holderMetric],
+    data.series[fund.code].categories[categoryKey],
     categoryKey,
     holderMetric,
   ));
@@ -895,6 +909,7 @@ async function renderHolderFund(data, fund) {
     holderMetric,
     false,
     `${chartId}-${holderMetric}-${categories.join("-")}-${prefersDark.matches}`,
+    data.periods,
   );
   layout.height = window.innerWidth < 768 ? 320 : 340;
   await Plotly.react(chartId, traces, layout, plotConfig);

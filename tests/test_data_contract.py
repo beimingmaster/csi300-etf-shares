@@ -134,22 +134,41 @@ class HolderDataContractTest(unittest.TestCase):
     def setUpClass(cls):
         cls.data = json.loads(HOLDER_JSON_PATH.read_text(encoding="utf-8"))
 
-    def test_complete_semiannual_panel_and_latest_disclosure(self):
+    def test_semiannual_history_and_latest_disclosure(self):
         periods = self.data["periods"]
         metadata = self.data["metadata"]
 
-        self.assertEqual(len(periods), 9)
+        self.assertEqual(len(periods), 28)
         self.assertEqual(periods, sorted(set(periods)))
-        self.assertEqual(periods[0], "2021-12-31")
+        self.assertEqual(periods[0], "2012-06-30")
         self.assertEqual(periods[-1], "2025-12-31")
         self.assertEqual(metadata["latest_disclosure_date"], "2026-03-31")
         self.assertEqual(metadata["disclosure_frequency"], "semiannual")
         self.assertFalse(metadata["q1_2026_holder_data_available"])
-        self.assertEqual(metadata["report_count"], len(periods) * 5)
+        self.assertEqual(metadata["report_count"], 134)
+        self.assertEqual(
+            metadata["reports_per_fund"],
+            {"510300": 27, "510310": 26, "510330": 26, "159919": 27, "159915": 28},
+        )
+        self.assertEqual(sum(metadata["source_kind_counts"].values()), 134)
         self.assertEqual({fund["code"] for fund in self.data["funds"]}, HOLDER_ALL_CODES)
         self.assertEqual(set(metadata["aggregate_fund_codes"]), DAILY_AGGREGATE_CODES)
         self.assertEqual(set(metadata["standalone_fund_codes"]), HOLDER_STANDALONE_CODES)
         self.assertNotIn("159915", metadata["aggregate_fund_codes"])
+
+        first_periods = {
+            "510300": "2012-12-31",
+            "510310": "2013-06-30",
+            "510330": "2013-06-30",
+            "159919": "2012-12-31",
+            "159915": "2012-06-30",
+        }
+        for code, first_period in first_periods.items():
+            series = self.data["series"][code]
+            self.assertEqual(series["first_report_period"], first_period)
+            first_index = periods.index(first_period)
+            self.assertTrue(all(value is None for value in series["total_shares_100m"][:first_index]))
+            self.assertIsNotNone(series["total_shares_100m"][first_index])
 
     def test_holder_categories_and_aggregate_are_consistent(self):
         categories = self.data["categories"]
@@ -163,22 +182,46 @@ class HolderDataContractTest(unittest.TestCase):
 
         periods = self.data["periods"]
         aggregate = self.data["aggregate"]
+        self.assertEqual(len(aggregate["member_counts"]), len(periods))
         for category in categories:
             aggregate_series = aggregate["categories"][category]
             self.assertEqual(len(aggregate_series["shares_100m"]), len(periods))
             self.assertEqual(len(aggregate_series["ratio_pct"]), len(periods))
             for index in range(len(periods)):
-                expected_shares = sum(
-                    self.data["series"][code]["categories"][category]["shares_100m"][index]
+                active_codes = [
+                    code
                     for code in DAILY_AGGREGATE_CODES
-                )
-                self.assertAlmostEqual(
-                    aggregate_series["shares_100m"][index],
-                    expected_shares,
-                    places=5,
-                )
-                self.assertGreaterEqual(aggregate_series["ratio_pct"][index], 0)
-                self.assertLessEqual(aggregate_series["ratio_pct"][index], 100)
+                    if self.data["series"][code]["total_shares_100m"][index] is not None
+                ]
+                self.assertEqual(aggregate["member_counts"][index], len(active_codes))
+                values = [
+                    self.data["series"][code]["categories"][category]["shares_100m"][index]
+                    for code in active_codes
+                ]
+                actual = aggregate_series["shares_100m"][index]
+                if not values or any(value is None for value in values):
+                    self.assertIsNone(actual)
+                    self.assertIsNone(aggregate_series["ratio_pct"][index])
+                else:
+                    self.assertAlmostEqual(actual, sum(values), places=5)
+                    self.assertGreaterEqual(aggregate_series["ratio_pct"][index], 0)
+                    self.assertLessEqual(aggregate_series["ratio_pct"][index], 100)
+
+        first_national_index = next(
+            index
+            for index, value in enumerate(
+                aggregate["categories"]["national_team"]["shares_100m"]
+            )
+            if value is not None
+        )
+        self.assertEqual(periods[first_national_index], "2019-12-31")
+        self.assertIsNone(
+            self.data["series"]["159915"]["categories"]["national_team"]["shares_100m"][0]
+        )
+        self.assertEqual(
+            self.data["series"]["159915"]["categories"]["national_team"]["precision"][0],
+            "not_identified",
+        )
 
     def test_public_holder_csv_has_three_rows_per_report(self):
         with HOLDER_CSV_PATH.open(encoding="utf-8", newline="") as handle:
@@ -190,11 +233,31 @@ class HolderDataContractTest(unittest.TestCase):
             {row["category"] for row in rows},
             {"national_team", "other_institution", "individual"},
         )
-        self.assertTrue(all(int(row["holder_shares"]) > 0 for row in rows))
+        self.assertTrue(
+            all(float(row["holder_shares"]) > 0 for row in rows if row["holder_shares"])
+        )
+        self.assertTrue(
+            any(
+                row["category"] == "national_team"
+                and not row["holder_shares"]
+                and row["precision_status"] == "not_identified"
+                for row in rows
+            )
+        )
+        self.assertEqual(
+            {row["source_kind"] for row in rows},
+            {"manager_official_pdf", "csrc_official_pdf", "public_report_mirror"},
+        )
         self.assertTrue(
             all(
                 row["official_pdf_url"].startswith(
-                    ("http://eid.csrc.gov.cn/", "https://cdn.efunds.com.cn/")
+                    (
+                        "http://eid.csrc.gov.cn/",
+                        "https://cdn.efunds.com.cn/",
+                        "https://www.huatai-pb.com/",
+                        "https://www.jsfund.cn/",
+                        "https://pdf.dfcfw.com/",
+                    )
                 )
                 for row in rows
             )
