@@ -33,6 +33,7 @@ const dateTimeFormat = new Intl.DateTimeFormat("zh-CN", {
 });
 
 const prefersDark = window.matchMedia("(prefers-color-scheme: dark)");
+const CHINEXT_HOLDER_CODE = "159915";
 let currentData = null;
 let currentHolderData = null;
 let holderMetric = "shares_100m";
@@ -891,9 +892,7 @@ async function renderHolders(data) {
   const aggregateFunds = data.funds.filter((fund) => (
     data.metadata.aggregate_fund_codes.includes(fund.code)
   ));
-  const standaloneFund = data.funds.find((fund) => (
-    data.metadata.standalone_fund_codes.includes(fund.code)
-  ));
+  const standaloneFund = data.funds.find((fund) => fund.code === CHINEXT_HOLDER_CODE);
   const grid = document.querySelector("#holder-fund-grid");
   grid.innerHTML = aggregateFunds.map(holderFundCard).join("");
   await Promise.all([
@@ -1005,7 +1004,8 @@ async function loadHolderData() {
       || data.periods.length === 0
       || data.funds.length !== 5
       || data.metadata.aggregate_fund_codes.length !== 4
-      || data.metadata.standalone_fund_codes.length !== 1
+      || data.metadata.standalone_fund_codes[0] !== CHINEXT_HOLDER_CODE
+      || !data.series[CHINEXT_HOLDER_CODE]
       || data.metadata.disclosure_frequency !== "semiannual"
     ) {
       throw new Error("holder data contract is incomplete");
