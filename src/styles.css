@@ -338,11 +338,81 @@ h1 {
 }
 
 .aggregate-section,
+.about-section,
 .holders-section,
 .funds-section,
 .methodology {
   padding: 106px 0;
   border-top: 1px solid var(--line);
+}
+
+.about-section {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.82fr) minmax(0, 1.18fr);
+  gap: clamp(48px, 9vw, 140px);
+}
+
+.about-heading h2 {
+  max-width: 12ch;
+  margin: 0;
+  font-size: clamp(36px, 4.8vw, 66px);
+  font-weight: 610;
+  letter-spacing: -0.05em;
+  line-height: 1.02;
+}
+
+.about-lead {
+  max-width: 64ch;
+  margin: 0;
+  font-size: clamp(18px, 1.55vw, 22px);
+  line-height: 1.78;
+}
+
+.about-facts {
+  margin-top: 46px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.about-facts article {
+  min-width: 0;
+  padding: 20px 0 0;
+  border-top: 2px solid var(--line);
+}
+
+.about-facts article:first-child {
+  border-top-color: var(--accent);
+}
+
+.about-facts strong {
+  color: var(--accent-strong);
+  font: 600 12px/1.4 "IBM Plex Mono", monospace;
+  letter-spacing: 0.08em;
+}
+
+.about-facts h3 {
+  margin: 15px 0 0;
+  font-size: 18px;
+  font-weight: 620;
+  letter-spacing: -0.025em;
+}
+
+.about-facts p {
+  margin: 11px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.72;
+}
+
+.about-boundary {
+  margin: 38px 0 0;
+  padding: 18px 20px;
+  border-left: 3px solid var(--accent);
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--surface) 84%, transparent);
+  font-size: 13px;
+  line-height: 1.75;
 }
 
 .section-heading {
@@ -914,6 +984,15 @@ footer p {
     max-width: 680px;
   }
 
+  .about-section {
+    grid-template-columns: 1fr;
+    gap: 42px;
+  }
+
+  .about-heading h2 {
+    max-width: 16ch;
+  }
+
   .fund-grid {
     grid-template-columns: 1fr;
   }
@@ -988,10 +1067,21 @@ footer p {
   }
 
   .aggregate-section,
+  .about-section,
   .holders-section,
   .funds-section,
   .methodology {
     padding: 78px 0;
+  }
+
+  .about-section {
+    gap: 34px;
+  }
+
+  .about-facts {
+    margin-top: 36px;
+    grid-template-columns: 1fr;
+    gap: 28px;
   }
 
   .section-heading {

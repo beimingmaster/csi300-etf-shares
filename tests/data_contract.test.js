@@ -24,6 +24,7 @@ test("the page exposes all required static data views", async () => {
   ]);
 
   assert.match(html, /id="aggregate-chart"/);
+  assert.match(html, /id="about"/);
   assert.match(html, /id="holder-aggregate-shares-chart"/);
   assert.match(html, /id="holder-aggregate-ratio-chart"/);
   assert.match(html, /id="holder-category-filter"/);
