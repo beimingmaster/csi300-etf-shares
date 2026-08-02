@@ -24,7 +24,7 @@
 - 汇总曲线是四只基金原始份额的逐日算术合计。不同ETF每份净值不同，因此合计不代表净资产或资金流。
 - 510310在2024-09-20实施基金份额合并，数据脚本已将该大幅变化登记为核验过的公司行动。
 
-生成数据位于 `public/data/etf-shares.json` 和 `public/data/etf-shares.csv`。GitHub Actions 每天北京时间18:30刷新最近21个自然日，并在数据变化后提交结果。
+生成数据位于 `public/data/etf-shares.json` 和 `public/data/etf-shares.csv`。GitHub Actions 每天北京时间18:30刷新最近21个自然日，提交结果并直接发布到Cloudflare Pages。
 
 ## 本地开发
 
@@ -47,8 +47,8 @@ npm run build
 ## 自动化
 
 - `Validate` 在提交和拉取请求时验证数据契约并构建网站。
-- `Refresh ETF data` 每日抓取官方源、验证异常变动、测试、构建并提交生成数据。
-- `Deploy to Cloudflare Pages` 在 `main` 分支每次提交后重新构建并部署纯静态产物。
+- `Refresh ETF data` 每日抓取官方源、验证异常变动、测试、构建、提交生成数据并部署纯静态产物。
+- `Deploy to Cloudflare Pages` 在普通 `main` 分支提交后重新构建并部署纯静态产物。
 - Cloudflare Pages使用免费Direct Upload，不启用Functions、KV、D1、R2或其他存储服务。
 
 ## 许可与声明
