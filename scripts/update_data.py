@@ -40,7 +40,8 @@ THREAD_LOCAL = threading.local()
 
 HISTORY_START_DATE = date(2012, 1, 1)
 REFRESH_DAYS = 21
-SSE_WORKERS = 4
+CALENDAR_QUERY_PADDING_DAYS = 7
+SSE_WORKERS = 1
 SSE_CHECKPOINT_SIZE = 40
 SZSE_CHUNK_DAYS = 170
 
@@ -218,8 +219,13 @@ def make_session() -> requests.Session:
     session.mount("https://", adapter)
     session.headers.update(
         {
-            "User-Agent": "Mozilla/5.0 (compatible; csi300-etf-shares/1.0)",
+            "User-Agent": (
+                "Mozilla/5.0 (X11; Linux x86_64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/136.0.0.0 Safari/537.36"
+            ),
             "Accept": "application/json,text/plain,*/*",
+            "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
         }
     )
     return session
@@ -249,12 +255,13 @@ def get_json(
 
 
 def fetch_trading_calendar(start: date, end: date) -> list[date]:
+    query_start = start - timedelta(days=CALENDAR_QUERY_PADDING_DAYS)
     payload = get_json(
         make_session(),
         CSI_INDEX_URL,
         {
             "indexCode": CSI300_CODE,
-            "startDate": start.strftime("%Y%m%d"),
+            "startDate": query_start.strftime("%Y%m%d"),
             "endDate": end.strftime("%Y%m%d"),
         },
         "https://www.csindex.com.cn/",
@@ -276,7 +283,9 @@ def fetch_trading_calendar(start: date, end: date) -> list[date]:
             )
         trade_date = datetime.strptime(str(row["tradeDate"]), "%Y%m%d").date()
         if not start <= trade_date <= end:
-            raise ValueError(f"out-of-range CSI index date: {trade_date}")
+            continue
+        if trade_date.weekday() >= 5:
+            raise ValueError(f"weekend trading date from CSI index API: {trade_date}")
         if trade_date in dates:
             raise ValueError(f"duplicate CSI index date: {trade_date}")
         close = float(row["close"])
@@ -304,10 +313,17 @@ def fetch_sse_day(day: date) -> list[dict[str, Any]]:
     )
     values: dict[str, float] = {}
     for item in payload.get("result", []):
+        returned_date = str(item.get("STAT_DATE", "")).strip()
+        if returned_date and returned_date != day.isoformat():
+            raise ValueError(
+                f"SSE returned unexpected date {returned_date} for {day}"
+            )
         code = str(item.get("SEC_CODE", "")).strip()
         if code in SSE_CODES:
             values[code] = float(str(item["TOT_VOL"]).replace(",", "")) / 10_000
     missing = SSE_CODES - set(values)
+    if missing == SSE_CODES:
+        return []
     if missing:
         raise ValueError(f"SSE missing {sorted(missing)} on {day}")
     return [
@@ -491,6 +507,62 @@ def validate_rows(
                         f"{(ratio - 1) * 100:.2f}%"
                     )
             previous = shares
+
+
+def trim_to_complete_prefix(
+    rows: dict[tuple[date, str], dict[str, Any]],
+    trading_dates: list[date],
+) -> list[date]:
+    if not trading_dates:
+        raise RuntimeError("no trading dates to validate")
+
+    completeness: list[bool] = []
+    for day in trading_dates:
+        required_codes = {
+            fund.code
+            for fund in FUNDS
+            if day >= parse_date(fund.daily_start_date)
+        }
+        completeness.append(
+            bool(required_codes)
+            and all((day, code) in rows for code in required_codes)
+        )
+
+    complete_indexes = [
+        index for index, complete in enumerate(completeness) if complete
+    ]
+    if not complete_indexes:
+        raise RuntimeError("no complete trading date is available")
+    latest_complete_index = complete_indexes[-1]
+    incomplete_before_latest = [
+        trading_dates[index]
+        for index in range(latest_complete_index + 1)
+        if not completeness[index]
+    ]
+    if incomplete_before_latest:
+        raise ValueError(
+            "incomplete trading date before latest complete date: "
+            f"{incomplete_before_latest[0]}"
+        )
+
+    complete_prefix = trading_dates[: latest_complete_index + 1]
+    if len(complete_prefix) < len(trading_dates):
+        withheld = trading_dates[len(complete_prefix) :]
+        print(
+            "withheld unpublished tail dates: "
+            + ",".join(day.isoformat() for day in withheld),
+            flush=True,
+        )
+    return complete_prefix
+
+
+def payload_without_update_time(payload: dict[str, Any]) -> dict[str, Any]:
+    normalized = {
+        **payload,
+        "metadata": {**payload["metadata"]},
+    }
+    normalized["metadata"].pop("updated_at", None)
+    return normalized
 
 
 def atomic_write_text(path: Path, content: str) -> None:
@@ -728,11 +800,14 @@ def main() -> None:
     end = parse_date(args.end) if args.end else datetime.now(TIMEZONE).date()
     calendar_start = parse_date(args.start) if args.start else HISTORY_START_DATE
     calendar = fetch_trading_calendar(calendar_start, end)
-    latest_date = calendar[-1]
     requested_start = parse_date(args.start) if args.start else HISTORY_START_DATE
     trading_dates = [day for day in calendar if day >= requested_start]
     if not trading_dates:
         raise RuntimeError("no CSI 300 trading dates in requested window")
+
+    previous_payload: dict[str, Any] | None = None
+    if JSON_PATH.exists():
+        previous_payload = json.loads(JSON_PATH.read_text(encoding="utf-8"))
 
     rows = load_rows(CSV_PATH)
     archive_rows = load_rows(ARCHIVE_CSV_PATH)
@@ -742,7 +817,7 @@ def main() -> None:
         rows.update(load_rows(args.seed_csv))
         print(f"loaded seed cache from {args.seed_csv}", flush=True)
 
-    refresh_cutoff = latest_date - timedelta(days=args.refresh_days)
+    refresh_cutoff = trading_dates[-1] - timedelta(days=args.refresh_days)
     sse_dates = [
         day
         for day in trading_dates
@@ -767,24 +842,41 @@ def main() -> None:
 
     for item in fetch_sse_dates(sse_dates):
         rows[(item["date"], item["code"])] = item
-    write_csv(rows)
     if szse_dates:
         selected_szse_dates = set(szse_dates)
         for code in sorted(SZSE_CODES):
             for item in fetch_szse_range(code, min(szse_dates), max(szse_dates)):
                 if item["date"] in selected_szse_dates:
                     rows[(item["date"], item["code"])] = item
-        write_csv(rows)
 
-    validate_rows(rows, trading_dates)
+    trading_dates = trim_to_complete_prefix(rows, trading_dates)
+    latest_date = trading_dates[-1]
+    published_dates = set(trading_dates)
+    published_rows = {
+        key: item
+        for key, item in rows.items()
+        if key[0] in published_dates
+        and key[0] >= parse_date(FUND_BY_CODE[key[1]].daily_start_date)
+    }
+    validate_rows(published_rows, trading_dates)
     updated_at = datetime.now(TIMEZONE).replace(microsecond=0)
     payload = build_payload(
-        rows,
+        published_rows,
         trading_dates,
         requested_start,
         updated_at,
     )
-    write_csv(rows)
+    data_changed = True
+    if (
+        previous_payload is not None
+        and payload_without_update_time(previous_payload)
+        == payload_without_update_time(payload)
+    ):
+        payload["metadata"]["updated_at"] = previous_payload["metadata"][
+            "updated_at"
+        ]
+        data_changed = False
+    write_csv(published_rows)
     atomic_write_text(
         JSON_PATH,
         json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n",
@@ -798,7 +890,8 @@ def main() -> None:
                 "actual_start_date": trading_dates[0].isoformat(),
                 "latest_data_date": latest_date.isoformat(),
                 "observations": len(trading_dates),
-                "updated_at": updated_at.isoformat(),
+                "updated_at": payload["metadata"]["updated_at"],
+                "data_changed": data_changed,
                 "json": str(JSON_PATH.relative_to(ROOT)),
                 "csv": str(CSV_PATH.relative_to(ROOT)),
             },

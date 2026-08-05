@@ -32,7 +32,7 @@
 - “国家队”仅合计前十名持有人中明确命名的中央汇金和中国证券金融账户，是已识别下限；未进入前十或未识别时留空而不是记为0。“其他机构”是可比机构份额扣除已识别下限后的上限，包含保险、券商、银行和资管等，不含ETF联接基金。
 - 一季报和三季报不披露持有人结构或上市基金前十名持有人，不能从日度总份额变化推断2026年Q1的国家队、机构或个人持仓。
 
-日份额数据位于 `public/data/etf-shares.json` 和 `public/data/etf-shares.csv`；持有人数据位于 `public/data/holder-structure.json` 和 `public/data/holder-structure.csv`。GitHub Actions每天北京时间18:30刷新最近21个自然日的日份额，提交结果并直接发布到Cloudflare Pages。持有人数据在年报和中报公开后更新，不做日频插值。
+日份额数据位于 `public/data/etf-shares.json` 和 `public/data/etf-shares.csv`；持有人数据位于 `public/data/holder-structure.json` 和 `public/data/holder-structure.csv`。GitHub Actions在A股交易日收盘后尝试刷新，并于次日早晨补抓尚未披露的数据；只有五只基金日期对齐、数据契约与构建全部通过后才提交并发布到Cloudflare Pages。持有人数据在年报和中报公开后更新，不做日频插值。
 
 ## 本地开发
 

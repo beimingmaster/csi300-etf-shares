@@ -2,7 +2,10 @@ name: Refresh ETF data
 
 on:
   schedule:
-    - cron: "30 10 * * *"
+    # First attempt after the mainland close; the next-morning run backfills
+    # exchange disclosures that were not yet available the prior evening.
+    - cron: "30 12 * * 1-5"
+    - cron: "30 0 * * 2-6"
   workflow_dispatch:
 
 permissions:
@@ -31,6 +34,7 @@ jobs:
       - run: npm test
       - run: npm run build
       - name: Commit refreshed data
+        if: github.ref == 'refs/heads/main'
         run: |
           git add public/data/etf-shares.csv public/data/etf-shares.json
           if git diff --cached --quiet; then
@@ -43,6 +47,7 @@ jobs:
           fi
       # Pushes made with GITHUB_TOKEN do not trigger other workflows, so deploy here too.
       - name: Deploy refreshed static assets
+        if: github.ref == 'refs/heads/main'
         run: >-
           npx --yes wrangler@4.118.0 pages deploy dist
           --project-name csi300-etf-shares
