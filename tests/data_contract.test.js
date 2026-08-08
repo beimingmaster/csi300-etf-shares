@@ -63,3 +63,12 @@ test("holder controls expose all requested categories and metrics", async () => 
   assert.match(script, /metadata\.aggregate_fund_codes/);
   assert.match(script, /metadata\.standalone_fund_codes/);
 });
+
+test("CI installs Python requirements before running the test suite", async () => {
+  const workflow = await read(".github/workflows/ci.yml");
+  const installStep = workflow.indexOf("pip install -r scripts/requirements.txt");
+  const testStep = workflow.indexOf("- run: npm test");
+
+  assert.notEqual(installStep, -1, "CI must install scripts/requirements.txt");
+  assert.ok(installStep < testStep, "CI must install Python dependencies before npm test");
+});
