@@ -72,3 +72,16 @@ test("CI installs Python requirements before running the test suite", async () =
   assert.notEqual(installStep, -1, "CI must install scripts/requirements.txt");
   assert.ok(installStep < testStep, "CI must install Python dependencies before npm test");
 });
+
+test("range selector clicks bypass press cursor interception", async () => {
+  const script = await read("src/main.js");
+  const handlerStart = script.indexOf("const onPointerDown = (event) => {");
+  const handlerEnd = script.indexOf("const onPointerMove = (event) => {", handlerStart);
+  const handler = script.slice(handlerStart, handlerEnd);
+
+  assert.match(handler, /event\.target\.closest\?\.\("\.rangeselector"\)/);
+  assert.ok(
+    handler.indexOf(".rangeselector") < handler.indexOf("event.preventDefault()"),
+    "range selector guard must run before pointerdown prevents the native click",
+  );
+});

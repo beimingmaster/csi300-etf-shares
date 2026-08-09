@@ -373,6 +373,9 @@ function bindPressCursor(chartId) {
   };
 
   const onPointerDown = (event) => {
+    if (event.target.closest?.(".rangeselector")) {
+      return;
+    }
     if (!event.isPrimary || (event.pointerType === "mouse" && event.button !== 0)) {
       return;
     }
