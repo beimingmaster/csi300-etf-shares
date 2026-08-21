@@ -17028,3 +17028,8 @@ date,code,shares_100m,exchange,source,quality,method
 2026-08-19,510300,238.585877,上交所,https://query.sse.com.cn/commonQuery.do,official,exchange_disclosure
 2026-08-19,510310,114.333440,上交所,https://query.sse.com.cn/commonQuery.do,official,exchange_disclosure
 2026-08-19,510330,85.016498,上交所,https://query.sse.com.cn/commonQuery.do,official,exchange_disclosure
+2026-08-20,159915,181.604549,深交所,https://www.szse.cn/api/report/ShowReport/data,official,exchange_disclosure
+2026-08-20,159919,62.714166,深交所,https://www.szse.cn/api/report/ShowReport/data,official,exchange_disclosure
+2026-08-20,510300,237.433877,上交所,https://query.sse.com.cn/commonQuery.do,official,exchange_disclosure
+2026-08-20,510310,115.224440,上交所,https://query.sse.com.cn/commonQuery.do,official,exchange_disclosure
+2026-08-20,510330,85.016498,上交所,https://query.sse.com.cn/commonQuery.do,official,exchange_disclosure
